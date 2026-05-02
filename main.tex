@@ -177,6 +177,8 @@ EdgeCase & 20 & 1.000 & 0.700 & 41.7 \\
 
 Table~\ref{tab:ablation} reports the 205-question ablation. Because this ablation reruns the LLM planner, its full-system row is an independent S1 sample rather than a cached copy of the full benchmark predictions. The full and LLM-only rows are identical in this run because no scored case required regex fallback. Regex-only parsing is orders of magnitude faster, but operation accuracy drops from 99.5\% to 81.5\%. This gap is largest for operation families that require semantic intent beyond obvious keyword matching, especially DetectOldest, DetectAnomaly, and DetectCount.
 
+The per-group ablation results clarify where the LLM planner adds value. Regex-only parsing reaches 100.0\% operation accuracy for explicit tasks such as DetectLatest, DetectTrend, DetectAverage, DetectMaximum, and DetectMinimum, but it falls to 40.0\% for DetectOldest, 30.0\% for DetectAnomaly, and 75.0\% for DetectCount. These failures are not random formatting errors; they reflect ambiguous linguistic cues such as ``earliest'', ``abnormal'', or ``how many'' that require mapping to the operation taxonomy. The ablation therefore supports a practical hybrid interpretation: use deterministic schema validation and repair for safety, but keep the LLM planner for semantic operation selection.
+
 \begin{table}[t]
 \centering
 \scriptsize
@@ -232,9 +234,13 @@ The ablation study supports the hybrid design. Regex-only parsing is nearly inst
 
 The full benchmark skipped S3 and S4, so this paper reports S1 planning and S2 data-hit behavior for that run rather than final answer quality or chart-rendering quality. The visualizations in this manuscript are offline analysis figures generated from the benchmark and ablation JSON files; they are not evidence that S4 chart rendering succeeded during the full benchmark. The benchmark is domain-specific and evaluates the MongoDB sensor operation taxonomy described above.
 
+The strongest version of the claim is therefore architectural rather than universal: Text2Query shows that a small, auditable QueryPlan can make natural language access to a MongoDB sensor store measurable at the decision level. The paper does not claim cross-domain generalization to arbitrary databases, nor does it claim that final user-facing answers have been evaluated end to end. This framing matters for venue fit: the contribution is best positioned as an applied information-systems or sensor-data interface study, not as a new general-purpose text-to-SQL benchmark.
+
 \subsection{Practical Implications}
 
 The results suggest a deployment strategy. First, keep a structured QueryPlan visible in logs and, when appropriate, in user-facing explanations. Second, distinguish planner failures from execution failures. Third, cache or optimize S1 calls because planner latency dominates the run. Fourth, add targeted rules or examples for all-sensor, pressure, air-quality, and generic sensor-data questions, because these account for most remaining collection and field mistakes.
+
+For a production deployment, the most immediate engineering improvement is latency control. The benchmark shows that S2 database access takes only 9.1 ms on average, while S1 planning takes about 26.5 seconds. A cached plan library for repeated monitoring questions, a smaller planner model for routine operation classes, and routing regex-confident questions away from the LLM would preserve most of the measured accuracy while reducing response time.
 
 \section{Conclusion}
 
