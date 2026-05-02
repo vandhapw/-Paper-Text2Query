@@ -18,7 +18,7 @@
 \maketitle
 
 \begin{abstract}
-Natural language interfaces can make sensor databases accessible to operators who do not write database queries, but deployed systems must be evaluated at more than the final-answer level. A system may understand the user's operation while still failing because a collection was omitted, a field was over-broad, the requested time window has no data, or the database service is unreachable. We present Text2Query, a hybrid natural language interface for MongoDB-backed IoT sensor data. Text2Query decomposes a question into a structured QueryPlan, executes it over MongoDB collections, verbalizes the result, and optionally produces visualizations. Using the archived 205-question benchmark artifact supplied with the project, Text2Query achieves 100.0\% S1 operation accuracy with a 95\% confidence interval of [98.16\%, 100.0\%], 96.1\% collection accuracy, 87.6\% average field Jaccard score, and 96.1\% time-scope accuracy; the S2 executor returns data for 63.9\% of questions. A current five-question smoke run on 2026-05-02 reproduced perfect S1 planning but returned no S2 data because the configured MongoDB endpoint was blocked from the execution environment. The results show that Text2Query is strongest as a domain-specific semantic planner, while data availability and service reachability must be reported as separate execution outcomes.
+Natural language interfaces can make sensor databases accessible to operators who do not write database queries, but deployed systems must be evaluated at more than the final-answer level. A system may understand the user's operation while still failing because a collection was omitted, a field was over-broad, the requested time window has no data, or the database service is unreachable. We present Text2Query, a hybrid natural language interface for MongoDB-backed IoT sensor data. Text2Query decomposes a question into a structured QueryPlan, executes it over MongoDB collections, verbalizes the result, and optionally produces visualizations. In a fresh 205-question benchmark run on 2026-05-02, Text2Query achieves 100.0\% S1 operation accuracy with a 95\% confidence interval of [98.16\%, 100.0\%], 95.6\% collection accuracy, 87.4\% average field Jaccard score, and 96.6\% time-scope accuracy; the S2 executor returns data for 99.5\% of questions. An ablation study shows that the LLM planner improves operation accuracy from 81.5\% with regex-only parsing to 99.5\% in the full system, while regex-only parsing is much faster. The results show that Text2Query is strongest as a domain-specific semantic planner, while the remaining weaknesses are concentrated in broad collection requests, field disambiguation, and latency.
 \end{abstract}
 
 \section{Introduction}
@@ -32,9 +32,9 @@ This paper presents Text2Query, a hybrid natural language interface for MongoDB-
 Our contributions are:
 \begin{itemize}
 \item A modular MongoDB sensor-query architecture with an auditable intermediate QueryPlan.
-\item A stage-wise benchmark report over 205 questions and 11 operation categories.
-\item A reproducibility account that distinguishes archived benchmark evidence from a current smoke run in a restricted execution environment.
-\item A failure analysis showing that the dominant remaining error sources are data availability, broad collection requests, and field disambiguation rather than operation classification.
+\item A stage-wise full benchmark report over 205 questions and 11 operation categories.
+\item An ablation study comparing the full system, an LLM-only planner, and a regex-only planner.
+\item A failure analysis showing that the dominant remaining error sources are broad collection requests and field disambiguation rather than operation classification or database execution.
 \end{itemize}
 
 \section{Related Work}
@@ -70,7 +70,7 @@ The key design decision is the explicit intermediate representation. Direct natu
 
 The QueryPlan contract is deliberately small. It records the operation family, one or more MongoDB collections, a field set, a time scope, and an intent label. This structure turns natural language interpretation into a set of separately checkable decisions. For example, a question can have the correct DetectCompare operation but still miss the weather collection, or it can select the right collection while expanding the field set too broadly. Text2Query's benchmark metrics mirror this contract: exact match for operation and time scope, set match for collections, Jaccard overlap for fields, and a separate data-hit indicator for execution.
 
-This design also makes repair local. When the decomposer emits a plan that violates the expected schema or uses an unsupported field alias, the system can repair the plan before S2 execution rather than relying on S3 to explain an empty or malformed result. The archived run's low repair rate shows that repair was rarely invoked, but keeping it as a distinct mechanism preserves auditability and prevents the answer generator from becoming the first place where query errors are visible.
+This design also makes repair local. When the decomposer emits a plan that violates the expected schema or uses an unsupported field alias, the system can repair the plan before S2 execution rather than relying on S3 to explain an empty or malformed result. The fresh run's low repair rate shows that repair was rarely invoked, but keeping it as a distinct mechanism preserves auditability and prevents the answer generator from becoming the first place where query errors are visible.
 
 \subsection{MongoDB Sensor Domain}
 
@@ -82,11 +82,11 @@ The supported operation taxonomy contains point lookups, range queries, trends, 
 
 \subsection{Artifacts}
 
-We used two kinds of evidence. The primary evidence is the archived full benchmark artifact \path{benchmark_results_v2_cloud.json}. It contains 205 questions, no group filter, no pipeline errors, and S3 and S4 skipped. The skip setting means the archived run evaluates S1 planning and S2 data retrieval rather than final answer quality or chart rendering.
+The primary evidence is a fresh full benchmark run executed on 2026-05-02 from the provided project folder, producing \path{benchmark_rigorous_full_20260502_rerun.json}. It contains 205 questions, no group filter, no pipeline errors, and S3 and S4 skipped. The skip setting means the run evaluates S1 planning and S2 data retrieval rather than final answer quality or chart rendering.
 
-The second evidence source is a current smoke run executed on 2026-05-02 from the provided project folder. Dependencies were installed in an isolated \texttt{uv} environment, and the unit-test command reported 75 passing tests. A five-question rigorous smoke benchmark was then run with S3 and S4 skipped, producing \path{benchmark_rigorous_smoke_20260502.json}. Attempts to run the full 205-question benchmark and a 20-question DetectLatest group exceeded the command time budget because individual questions took tens of seconds.
+The second evidence source is an ablation run over the same 205 questions, producing \path{benchmark_ablation_20260502.json}. This run compares three S1 planning variants: the full pipeline, an LLM-only score that treats regex fallback as failure, and a regex-only parser with schema validation. The full and LLM-only scores share one decomposer call per question in the implementation, so differences would appear only when the full path relies on regex fallback.
 
-The distinction between archived and current evidence is important for interpretation. The archived artifact is the complete quantitative benchmark for the manuscript. The current run checks that the code path remains executable in this workspace and records the behavior of the present services. It is therefore used as a reproducibility signal rather than as a replacement for the archived full run.
+Dependencies were installed in an isolated \texttt{uv} environment, and the same benchmark code path was used for the full run and ablation. Visualizations in this paper were regenerated from these two JSON artifacts rather than from the older sample figure set.
 
 \subsection{Metrics}
 
@@ -94,14 +94,14 @@ For S1, operation and time-scope accuracy are exact-match metrics. Collection ac
 
 \section{Results}
 
-\subsection{Archived Full Benchmark}
+\subsection{Full Benchmark}
 
-Table~\ref{tab:main-results} reports the archived 205-question benchmark. The S1 decomposer solved every operation classification case, with the lower bound of the 95\% confidence interval at 98.16\%. Collection selection and time-scope parsing were also high at 96.1\%, while field extraction was lower at 87.6\% average Jaccard. S2 returned data for 63.9\% of questions.
+Table~\ref{tab:main-results} reports the fresh 205-question benchmark. The S1 decomposer solved every operation classification case, with the lower bound of the 95\% confidence interval at 98.16\%. Collection selection and time-scope parsing were also high at 95.6\% and 96.6\%, while field extraction was lower at 87.4\% average Jaccard. S2 returned data for 99.5\% of questions, with only one no-data case in the full run.
 
 \begin{table}[t]
 \centering
 \small
-\caption{Archived 205-question benchmark metrics from the full benchmark JSON artifact. S3 and S4 were skipped in this run.}
+\caption{Fresh 205-question benchmark metrics. S3 and S4 were skipped in this run.}
 \label{tab:main-results}
 \begin{tabular}{lr}
 \toprule
@@ -111,17 +111,17 @@ Total questions & 205 \\
 Pipeline errors & 0 \\
 S1 operation accuracy & 1.000 \\
 S1 operation 95\% CI & [0.9816, 1.0000] \\
-S1 collection accuracy & 0.961 \\
-S1 collection 95\% CI & [0.9249, 0.9801] \\
-S1 field Jaccard average & 0.876 \\
-S1 time-scope accuracy & 0.961 \\
-S2 data hit rate & 0.639 \\
-S1 repair rate & 0.0098 \\
-S1 LLM-source rate & 0.9902 \\
-Average total latency & 44423.7 ms \\
-Median total latency & 18688.0 ms \\
-Average S1 latency & 44417.7 ms \\
-Average S2 latency & 6.0 ms \\
+S1 collection accuracy & 0.956 \\
+S1 collection 95\% CI & [0.9187, 0.9767] \\
+S1 field Jaccard average & 0.874 \\
+S1 time-scope accuracy & 0.966 \\
+S2 data hit rate & 0.995 \\
+S1 repair rate & 0.029 \\
+S1 LLM-source rate & 0.971 \\
+Average total latency & 26554.5 ms \\
+Median total latency & 12446.5 ms \\
+Average S1 latency & 26545.4 ms \\
+Average S2 latency & 9.1 ms \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -131,79 +131,91 @@ Table~\ref{tab:by-operation} shows that operation recognition was perfect across
 \begin{table}[t]
 \centering
 \small
-\caption{Archived performance by operation group.}
+\caption{Fresh full benchmark performance by operation group.}
 \label{tab:by-operation}
-\begin{tabular}{lrrr}
+\begin{tabular}{lrrrr}
 \toprule
-Group & $n$ & Op. acc. & Coll. acc. \\
+Group & $n$ & Op. acc. & Coll. acc. & Latency (s) \\
 \midrule
-DetectLatest & 20 & 1.000 & 1.000 \\
-DetectOldest & 15 & 1.000 & 1.000 \\
-DetectRange & 15 & 1.000 & 1.000 \\
-DetectTrend & 25 & 1.000 & 1.000 \\
-DetectAverage & 20 & 1.000 & 1.000 \\
-DetectMaximum & 15 & 1.000 & 1.000 \\
-DetectMinimum & 15 & 1.000 & 1.000 \\
-DetectAnomaly & 20 & 1.000 & 1.000 \\
-DetectCount & 20 & 1.000 & 1.000 \\
-DetectCompare & 20 & 1.000 & 0.900 \\
-EdgeCase & 20 & 1.000 & 0.700 \\
+DetectLatest & 20 & 1.000 & 1.000 & 19.4 \\
+DetectOldest & 15 & 1.000 & 1.000 & 62.4 \\
+DetectRange & 15 & 1.000 & 1.000 & 18.8 \\
+DetectTrend & 25 & 1.000 & 1.000 & 20.7 \\
+DetectAverage & 20 & 1.000 & 1.000 & 11.7 \\
+DetectMaximum & 15 & 1.000 & 1.000 & 14.6 \\
+DetectMinimum & 15 & 1.000 & 1.000 & 54.7 \\
+DetectAnomaly & 20 & 1.000 & 1.000 & 19.8 \\
+DetectCount & 20 & 1.000 & 1.000 & 17.8 \\
+DetectCompare & 20 & 1.000 & 0.850 & 23.1 \\
+EdgeCase & 20 & 1.000 & 0.700 & 41.7 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.92\linewidth]{figures/operationperformance.png}
-\caption{Operation-level performance visualization from the supplied publication figure set. The numeric claims in this manuscript are taken from the archived JSON benchmark report.}
+\includegraphics[width=0.98\linewidth]{figures/groupmetrics.png}
+\caption{Stage accuracy by benchmark group from the fresh 205-question run. DetectCompare and EdgeCase are the main sources of collection and field degradation.}
 \label{fig:operation-performance}
 \end{figure}
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.92\linewidth]{figures/latencybreakdown.png}
-\caption{Latency breakdown from the supplied publication figure set. The archived benchmark shows that S1 dominates runtime, while S2 execution is small when the database endpoint is reachable.}
+\includegraphics[width=0.92\linewidth]{figures/overallmetrics.png}
+\caption{Overall pipeline metrics from the fresh full benchmark. The S2 data-hit rate is high in this run, while repair remains rare.}
+\label{fig:overall-metrics}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.98\linewidth]{figures/latencybygroup.png}
+\caption{Latency by benchmark group from the fresh run. Runtime is dominated by S1 decomposition; S2 query execution is small once the database endpoint is reachable.}
 \label{fig:latency-breakdown}
 \end{figure}
 
-\subsection{Current Smoke Run}
+\subsection{Ablation Study}
 
-The current smoke run is useful as a reproducibility check, not as a replacement for the archived full benchmark. Table~\ref{tab:smoke} reports the five-question run. S1 used the LLM path for every question and correctly predicted the operation, collection, fields, and time scope. S2 returned no data because each MongoDB query failed with Windows socket error 10013 against the configured remote endpoint. Local MongoDB endpoints were also unavailable.
+Table~\ref{tab:ablation} reports the 205-question ablation. Because this ablation reruns the LLM planner, its full-system row is an independent S1 sample rather than a cached copy of the full benchmark predictions. The full and LLM-only rows are identical in this run because no scored case required regex fallback. Regex-only parsing is orders of magnitude faster, but operation accuracy drops from 99.5\% to 81.5\%. This gap is largest for operation families that require semantic intent beyond obvious keyword matching, especially DetectOldest, DetectAnomaly, and DetectCount.
 
 \begin{table}[t]
 \centering
-\small
-\caption{Current five-question smoke run on 2026-05-02. S3 and S4 were skipped.}
-\label{tab:smoke}
-\begin{tabular}{lr}
+\scriptsize
+\caption{Ablation study over 205 questions.}
+\label{tab:ablation}
+\begin{tabular}{lrrrrrr}
 \toprule
-Metric & Value \\
+Mode & $n$ & Op. acc. & Coll. acc. & Field Jacc. & Time acc. & Latency (ms) \\
 \midrule
-Total questions & 5 \\
-Pipeline errors & 0 \\
-S1 operation accuracy & 1.000 \\
-S1 collection accuracy & 1.000 \\
-S1 field Jaccard average & 1.000 \\
-S1 time-scope accuracy & 1.000 \\
-S2 data hit rate & 0.000 \\
-S1 LLM-source rate & 1.000 \\
-Average total latency & 31709.2 ms \\
-Median total latency & 24844.0 ms \\
-Average S1 latency & 26434.0 ms \\
-Average S2 latency & 5275.2 ms \\
+Full & 205 & 0.995 & 0.956 & 0.886 & 0.966 & 25950.7 \\
+LLM-only & 205 & 0.995 & 0.956 & 0.886 & 0.966 & 25950.7 \\
+Regex-only & 205 & 0.815 & 0.937 & 0.873 & 0.980 & 0.1 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.98\linewidth]{figures/ablationcomparison.png}
+\caption{Ablation visualization. Regex-only parsing is extremely fast, but the LLM-based planner substantially improves operation selection.}
+\label{fig:ablation}
+\end{figure}
+
 \subsection{Failure Analysis}
 
-The archived error taxonomy shows three main patterns. First, broad all-location requests can omit the outdoor weather collection. Second, field extraction degrades when questions mention pressure or generic sensor data; several cases predict a default temperature field or expand to many fields. Third, many S2 no-data cases are time-scoped trend, average, maximum, or minimum questions. These failures should be interpreted differently: the first two are planner errors, while the third may reflect time-window mismatch or missing records.
+The fresh full benchmark error taxonomy shows three main patterns. First, broad all-location requests can omit the outdoor weather collection. Second, field extraction degrades when questions mention pressure or generic sensor data; several cases predict a default temperature field or expand to many fields. Third, weekly time expressions such as ``this week'' and ``last week'' can be normalized inconsistently as \texttt{last\_7d}. Only one S2 no-data case appears in the fresh full run, so execution availability is no longer the dominant limitation.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.92\linewidth]{figures/errordistribution.png}
-\caption{Failure distribution visualization from the supplied figure set. The principal distinction for deployment is between semantic planning errors and execution-layer data availability failures.}
+\includegraphics[width=0.92\linewidth]{figures/errortaxonomy.png}
+\caption{Failure taxonomy from the fresh full benchmark. Wrong fields are the most common semantic error, followed by wrong collections and time-scope mismatches.}
 \label{fig:error-distribution}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.82\linewidth]{figures/confusionmatrix.png}
+\caption{Operation confusion matrix from the fresh full benchmark. The diagonal structure shows that operation classification was stable across all benchmark categories.}
+\label{fig:confusion-matrix}
 \end{figure}
 
 \section{Discussion}
@@ -212,19 +224,21 @@ The archived error taxonomy shows three main patterns. First, broad all-location
 
 The strongest supported claim is that Text2Query's S1 decomposer is reliable at operation classification over the benchmarked IoT operation taxonomy. The 205-question run includes 11 operation categories and reports no operation mistakes. Collection and time-scope prediction are also strong but not perfect. Field extraction remains the most important semantic-planning weakness because sensor questions often underspecify whether a default field, all fields, or a domain-specific field such as pressure should be selected.
 
-The second supported claim is that execution must be evaluated independently. A 100.0\% operation score does not imply that the user receives data. The archived S2 data hit rate is 63.9\%, and the current smoke run returned no data because the database endpoint could not be reached. Treating this as a separate metric makes the system more transparent than a final-answer-only evaluation.
+The second supported claim is that execution must be evaluated independently. A 100.0\% operation score does not imply that the user receives data, but the fresh run shows that S2 can be reliable when the database endpoint is reachable: the data-hit rate is 99.5\%. Treating this as a separate metric makes the system more transparent than a final-answer-only evaluation and prevents execution availability from being confused with semantic planning quality.
+
+The ablation study supports the hybrid design. Regex-only parsing is nearly instantaneous and performs reasonably on collections, fields, and time scopes, but it misses many operation intents. The LLM-based planner closes most of that operation gap, raising operation accuracy from 81.5\% to 99.5\% in the ablation run. The cost is latency: average S1 planning remains about 26 seconds per question, so caching, prompt optimization, or a smaller planner model is necessary for interactive deployment.
 
 \subsection{Scope of Claims}
 
-The archived full benchmark skipped S3 and S4, so this paper reports S1 planning and S2 data-hit behavior for that run rather than final answer quality or chart-rendering quality. The supplied publication figure set includes S3 and S4-oriented visual material from prior artifacts, but the authoritative numerical results in this manuscript are the S1 and S2 metrics from \path{benchmark_results_v2_cloud.json}. The current smoke benchmark is small by design and documents present workspace behavior. The benchmark is domain-specific and evaluates the MongoDB sensor operation taxonomy described above.
+The full benchmark skipped S3 and S4, so this paper reports S1 planning and S2 data-hit behavior for that run rather than final answer quality or chart-rendering quality. The visualizations in this manuscript are offline analysis figures generated from the benchmark and ablation JSON files; they are not evidence that S4 chart rendering succeeded during the full benchmark. The benchmark is domain-specific and evaluates the MongoDB sensor operation taxonomy described above.
 
 \subsection{Practical Implications}
 
-The results suggest a deployment strategy. First, keep a structured QueryPlan visible in logs and, when appropriate, in user-facing explanations. Second, distinguish planner failures from execution failures. Third, cache or optimize S1 calls because planner latency dominates the archived run. Fourth, include explicit database health checks before running benchmarks; otherwise, S2 data hit rate can collapse for environmental reasons unrelated to language understanding.
+The results suggest a deployment strategy. First, keep a structured QueryPlan visible in logs and, when appropriate, in user-facing explanations. Second, distinguish planner failures from execution failures. Third, cache or optimize S1 calls because planner latency dominates the run. Fourth, add targeted rules or examples for all-sensor, pressure, air-quality, and generic sensor-data questions, because these account for most remaining collection and field mistakes.
 
 \section{Conclusion}
 
-Text2Query demonstrates that a hybrid natural language interface can map IoT sensor questions into structured MongoDB query plans with high operation, collection, field, and time-scope accuracy. On the archived 205-question benchmark, the system achieved 100.0\% operation accuracy, 96.1\% collection accuracy, 87.6\% field Jaccard, and 96.1\% time-scope accuracy, while S2 returned data for 63.9\% of questions. A current smoke run reproduced perfect S1 planning but exposed database reachability failures. These results support a careful conclusion: Text2Query is a strong domain-specific semantic planner, but robust deployment requires first-class monitoring of database availability, time-window alignment, and field ambiguity.
+Text2Query demonstrates that a hybrid natural language interface can map IoT sensor questions into structured MongoDB query plans with high operation, collection, field, and time-scope accuracy. On the fresh 205-question benchmark, the system achieved 100.0\% operation accuracy, 95.6\% collection accuracy, 87.4\% field Jaccard, and 96.6\% time-scope accuracy, while S2 returned data for 99.5\% of questions. The ablation study shows why the LLM planner matters: regex-only operation accuracy is 81.5\%, compared with 99.5\% for the full system in the ablation run. These results support a careful conclusion: Text2Query is a strong domain-specific semantic planner, but robust deployment requires better latency control and targeted handling of ambiguous collection and field requests.
 
 \begin{thebibliography}{99}
 
