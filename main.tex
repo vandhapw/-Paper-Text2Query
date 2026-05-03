@@ -3,6 +3,7 @@
 \usepackage{lmodern}
 \usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{array}
 \usepackage{microtype}
 \usepackage{url}
 \usepackage[section]{placeins}
@@ -87,6 +88,33 @@ The methodology is intentionally stage-wise. Rather than treating the system as 
 \end{figure}
 
 The key design decision is the explicit intermediate representation. Direct natural language to answer generation can appear successful while silently using the wrong field or collection. A QueryPlan makes these decisions inspectable. The benchmark therefore evaluates operation accuracy, collection accuracy, field Jaccard similarity, and time-scope accuracy before evaluating whether the database returns any rows. This also makes the system easier to debug: a wrong operation points to intent classification, a wrong collection points to schema grounding, a low field Jaccard score points to attribute disambiguation, and a no-data result points to S2 execution or dataset coverage.
+
+\subsection{End-to-end Text2Query Process}
+
+Text2Query receives a user question as plain text and progressively converts it into more constrained artifacts. A representative request is: ``What is the average indoor CO2 level this week?'' The S1 decomposer does not immediately query MongoDB. It first produces a QueryPlan that records the inferred operation, target collection, field, and time scope. For this example, the expected plan has operation \texttt{DetectAverage}, collection \klaencol{}, field \texttt{co2}, and a weekly time window. The deterministic validation layer then checks whether these names are supported by the local schema before S2 is allowed to execute the request.
+
+Table~\ref{tab:process-io} summarizes the concrete input and output at each stage. The numeric value in the final answer is intentionally shown as a placeholder because it is produced at runtime by S2 from MongoDB, not authored by the planner. This distinction is important: S1 is evaluated for semantic plan correctness, while S2 is evaluated for whether the validated plan returns data.
+
+\begin{table}[!htbp]
+\centering
+\scriptsize
+\caption{Input and output artifacts in the Text2Query pipeline.}
+\label{tab:process-io}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.16\linewidth}>{\raggedright\arraybackslash}p{0.74\linewidth}}
+\toprule
+Stage & Input-output trace \\
+\midrule
+User request & \textbf{Input:} Natural language question, e.g., ``What is the average indoor CO2 level this week?'' \textbf{Output:} raw question string passed to S1. \\
+S1 decomposer & \textbf{Input:} raw question, schema vocabulary, operation taxonomy, and planner prompt. \textbf{Output:} QueryPlan with \texttt{operation=DetectAverage}, collection \klaencol{}, field \texttt{co2}, and \texttt{time=this\_week}. \\
+Validation and repair & \textbf{Input:} candidate QueryPlan. \textbf{Output:} schema-valid QueryPlan, or a structured error when the operation, collection, field, or time scope is unsupported. \\
+S2 executor & \textbf{Input:} validated QueryPlan and MongoDB connection. \textbf{Output:} aggregation result and evidence context, including returned records, aggregate value, row count, unit, and no-data status. \\
+S3 answer generator & \textbf{Input:} evidence context from S2. \textbf{Output:} user-facing answer, e.g., ``The average indoor CO2 level this week is \texttt{<value>} ppm,'' with the value filled from S2. \\
+S4 visualizer & \textbf{Input:} QueryPlan and evidence context, when the operation requests a chart. \textbf{Output:} optional chart specification or rendered visualization for trend, comparison, or anomaly views. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+This process separates interpretation from execution. If the planner chooses \texttt{DetectAverage} correctly but selects the wrong collection, the error is visible in the QueryPlan and counted as a collection error. If the plan is correct but MongoDB returns no rows for the requested window, the failure is counted at S2 rather than being confused with language understanding. The same input-output trace is used in the benchmark: each question is scored by comparing the S1 plan against expected operation, collection, field, and time labels before checking whether S2 returns data.
 
 \subsection{QueryPlan Contract and Validation}
 
