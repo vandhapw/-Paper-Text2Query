@@ -4,9 +4,11 @@
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{array}
+\usepackage{tikz}
 \usepackage{microtype}
 \usepackage{url}
 \usepackage[section]{placeins}
+\usetikzlibrary{arrows.meta,positioning}
 \setlength{\emergencystretch}{3em}
 \setcounter{topnumber}{2}
 \setcounter{bottomnumber}{1}
@@ -115,6 +117,38 @@ S4 visualizer & \textbf{Input:} QueryPlan and evidence context, when the operati
 \end{table}
 
 This process separates interpretation from execution. If the planner chooses \texttt{DetectAverage} correctly but selects the wrong collection, the error is visible in the QueryPlan and counted as a collection error. If the plan is correct but MongoDB returns no rows for the requested window, the failure is counted at S2 rather than being confused with language understanding. The same input-output trace is used in the benchmark: each question is scored by comparing the S1 plan against expected operation, collection, field, and time labels before checking whether S2 returns data.
+
+\subsection{Research Workflow}
+
+Figure~\ref{fig:research-workflow} illustrates the research workflow used to produce the evaluation reported in this paper. The workflow begins with a practical problem definition: operators need natural language access to MongoDB-backed sensor data, but final-answer evaluation alone cannot reveal where a failure occurs. The next steps define the sensor schema, implement the stage-wise Text2Query pipeline, construct a 205-question benchmark, and run the full system evaluation. The ablation study then isolates the contribution of the LLM planner by comparing the full system against LLM-only and regex-only planning modes. Finally, the benchmark artifacts are converted into figures, tables, failure analysis, and manuscript refinements.
+
+\begin{figure}[!htbp]
+\centering
+\scriptsize
+\begin{tikzpicture}[
+  node distance=6mm and 8mm,
+  wfstep/.style={draw, rounded corners=2pt, align=center, inner sep=4pt, text width=0.24\linewidth},
+  wfeval/.style={draw, rounded corners=2pt, align=center, inner sep=4pt, text width=0.24\linewidth},
+  arrow/.style={-{Latex[length=2.2mm]}, thick}
+]
+\node[wfstep] (problem) {\textbf{Problem framing}\\MongoDB sensor questions need auditable text-to-query behavior};
+\node[wfstep, right=of problem] (schema) {\textbf{Domain setup}\\Three sensor collections, field vocabulary, operation taxonomy};
+\node[wfstep, right=of schema] (system) {\textbf{System design}\\S1 QueryPlan, S2 execution, S3 answer, S4 visualization};
+\node[wfeval, below=of problem] (benchmark) {\textbf{Benchmark design}\\205 questions across 11 operation groups with expected labels};
+\node[wfeval, right=of benchmark] (fullrun) {\textbf{Full benchmark}\\Measure operation, collection, field, time, data-hit, and latency};
+\node[wfeval, right=of fullrun] (ablation) {\textbf{Ablation study}\\Compare full, LLM-only, and regex-only planning};
+\node[wfstep, below=of fullrun] (analysis) {\textbf{Analysis and paper}\\Figures, error taxonomy, discussion, and refined manuscript};
+\draw[arrow] (problem) -- (schema);
+\draw[arrow] (schema) -- (system);
+\draw[arrow] (system) -- (benchmark);
+\draw[arrow] (benchmark) -- (fullrun);
+\draw[arrow] (fullrun) -- (ablation);
+\draw[arrow] (fullrun) -- (analysis);
+\draw[arrow] (ablation) -- (analysis);
+\end{tikzpicture}
+\caption{Research workflow for Text2Query. The study proceeds from problem framing and domain setup to system implementation, benchmark construction, full evaluation, ablation, visualization, failure analysis, and manuscript refinement.}
+\label{fig:research-workflow}
+\end{figure}
 
 \subsection{QueryPlan Contract and Validation}
 
