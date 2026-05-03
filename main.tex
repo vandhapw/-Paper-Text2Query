@@ -5,7 +5,15 @@
 \usepackage{booktabs}
 \usepackage{microtype}
 \usepackage{url}
+\usepackage[section]{placeins}
 \setlength{\emergencystretch}{3em}
+\setcounter{topnumber}{2}
+\setcounter{bottomnumber}{1}
+\setcounter{totalnumber}{4}
+\renewcommand{\topfraction}{0.90}
+\renewcommand{\bottomfraction}{0.70}
+\renewcommand{\textfraction}{0.08}
+\renewcommand{\floatpagefraction}{0.80}
 \newcommand{\klaencol}{\texttt{plalion\_\allowbreak klaen\_\allowbreak sensor}}
 \newcommand{\companycol}{\texttt{plalion\_\allowbreak company\_\allowbreak sensor}}
 \newcommand{\weathercol}{\texttt{lighting\_\allowbreak weatherapi}}
@@ -71,9 +79,9 @@ Figure~\ref{fig:architecture} summarizes Text2Query. The user supplies a natural
 
 The methodology is intentionally stage-wise. Rather than treating the system as a black box that maps a question directly to an answer, each stage has a narrow responsibility and a corresponding validation surface. S1 is responsible for semantic interpretation, S2 for database grounding, S3 for language realization, and S4 for visualization. This decomposition follows the broader text-to-query pattern of separating intent interpretation from executable query formation \cite{guo2019irnet,scholak2021picard}, but adapts it to a document-store setting where the main executable artifact is a small QueryPlan rather than a full SQL string.
 
-\begin{figure}[t]
+\begin{figure}[!htbp]
 \centering
-\includegraphics[width=0.92\linewidth]{figures/architecture.png}
+\includegraphics[width=0.86\linewidth]{figures/architecture.png}
 \caption{System architecture of Text2Query. The benchmarked design separates language planning, MongoDB execution, answer generation, and visualization so that each stage can be evaluated independently.}
 \label{fig:architecture}
 \end{figure}
@@ -134,7 +142,7 @@ Table~\ref{tab:main-results} reports the fresh 205-question benchmark. The S1 de
 
 The most important result is the gap between operation classification and field-level grounding. Operation accuracy indicates that the planner usually understands the user's high-level intent, but field Jaccard reveals that this does not automatically imply perfect attribute selection. This distinction is important for sensor databases: a user may ask a correct DetectTrend question, but the answer is still operationally misleading if the planner chooses temperature when the intended field is pressure or if it expands a specific request into all environmental fields.
 
-\begin{table}[t]
+\begin{table}[!htbp]
 \centering
 \small
 \caption{Fresh 205-question benchmark metrics. S3 and S4 were skipped in this run.}
@@ -166,7 +174,7 @@ Table~\ref{tab:by-operation} shows that operation recognition was perfect across
 
 The by-operation view also clarifies that the benchmark is not dominated by a single easy operation family. The longest-latency groups are DetectOldest, DetectMinimum, and EdgeCase, suggesting that some prompts require longer planner deliberation even when the final operation is correct. The accuracy pattern is more favorable than the latency pattern: the slow groups are not necessarily inaccurate, but they expose the runtime cost of relying on the LLM planner for routine monitoring queries.
 
-\begin{table}[t]
+\begin{table}[!htbp]
 \centering
 \small
 \caption{Fresh full benchmark performance by operation group.}
@@ -190,26 +198,28 @@ EdgeCase & 20 & 1.000 & 0.700 & 41.7 \\
 \end{tabular}
 \end{table}
 
-\begin{figure}[t]
+\begin{figure}[!htbp]
 \centering
-\includegraphics[width=0.98\linewidth]{figures/groupmetrics.png}
+\includegraphics[width=0.94\linewidth]{figures/groupmetrics.png}
 \caption{Stage accuracy by benchmark group from the fresh 205-question run. DetectCompare and EdgeCase are the main sources of collection and field degradation.}
 \label{fig:operation-performance}
 \end{figure}
 
-\begin{figure}[t]
+\begin{figure}[!htbp]
 \centering
-\includegraphics[width=0.92\linewidth]{figures/overallmetrics.png}
+\includegraphics[width=0.78\linewidth]{figures/overallmetrics.png}
 \caption{Overall pipeline metrics from the fresh full benchmark. The S2 data-hit rate is high in this run, while repair remains rare.}
 \label{fig:overall-metrics}
 \end{figure}
 
-\begin{figure}[t]
+\begin{figure}[!htbp]
 \centering
-\includegraphics[width=0.98\linewidth]{figures/latencybygroup.png}
+\includegraphics[width=0.94\linewidth]{figures/latencybygroup.png}
 \caption{Latency by benchmark group from the fresh run. Runtime is dominated by S1 decomposition; S2 query execution is small once the database endpoint is reachable.}
 \label{fig:latency-breakdown}
 \end{figure}
+
+\FloatBarrier
 
 \subsection{Ablation Study}
 
@@ -219,7 +229,7 @@ The per-group ablation results clarify where the LLM planner adds value. Regex-o
 
 The identical full and LLM-only rows should be interpreted carefully. They show that the observed gains over regex-only parsing come from the LLM planner in this run, while deterministic validation and repair remain part of the system contract. Their value is preventive: they constrain the shape of the plan that reaches S2 and provide a place to catch unsupported fields or collections. This is consistent with constrained and structured generation work in text-to-SQL, where validity mechanisms improve reliability even when the main semantic signal comes from a neural or LLM component \cite{scholak2021picard,hong2024survey}.
 
-\begin{table}[t]
+\begin{table}[!htbp]
 \centering
 \scriptsize
 \caption{Ablation study over 205 questions.}
@@ -235,12 +245,14 @@ Regex-only & 205 & 0.815 & 0.937 & 0.873 & 0.980 & 0.1 \\
 \end{tabular}
 \end{table}
 
-\begin{figure}[t]
+\begin{figure}[!htbp]
 \centering
-\includegraphics[width=0.98\linewidth]{figures/ablationcomparison.png}
+\includegraphics[width=0.92\linewidth]{figures/ablationcomparison.png}
 \caption{Ablation visualization. Regex-only parsing is extremely fast, but the LLM-based planner substantially improves operation selection.}
 \label{fig:ablation}
 \end{figure}
+
+\FloatBarrier
 
 \subsection{Failure Analysis}
 
@@ -248,19 +260,21 @@ The fresh full benchmark error taxonomy shows three main patterns. First, broad 
 
 These errors are actionable because they map to specific engineering fixes. Broad collection failures suggest adding explicit all-location exemplars and a rule that generic environmental comparisons include indoor, office, and weather collections unless the user restricts the scope. Field errors suggest improving the schema alias table for pressure, air quality, and generic sensor terms. Time-scope errors suggest separating calendar-week interpretation from rolling-window interpretation. The benchmark therefore functions as both an evaluation and a debugging instrument.
 
-\begin{figure}[t]
+\begin{figure}[!htbp]
 \centering
-\includegraphics[width=0.92\linewidth]{figures/errortaxonomy.png}
+\includegraphics[width=0.84\linewidth]{figures/errortaxonomy.png}
 \caption{Failure taxonomy from the fresh full benchmark. Wrong fields are the most common semantic error, followed by wrong collections and time-scope mismatches.}
 \label{fig:error-distribution}
 \end{figure}
 
-\begin{figure}[t]
+\begin{figure}[!htbp]
 \centering
-\includegraphics[width=0.82\linewidth]{figures/confusionmatrix.png}
+\includegraphics[width=0.74\linewidth]{figures/confusionmatrix.png}
 \caption{Operation confusion matrix from the fresh full benchmark. The diagonal structure shows that operation classification was stable across all benchmark categories.}
 \label{fig:confusion-matrix}
 \end{figure}
+
+\FloatBarrier
 
 \section{Discussion}
 
