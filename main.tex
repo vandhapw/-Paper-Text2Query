@@ -23,11 +23,15 @@ Natural language interfaces can make sensor databases accessible to operators wh
 
 \section{Introduction}
 
-Natural language interfaces to databases promise to make operational data accessible without requiring every user to know a query language. This promise is especially relevant in IoT monitoring, where operators often ask routine but time-sensitive questions such as the latest temperature, a weekly carbon-dioxide trend, or a comparison between indoor and outdoor readings. The technical challenge is not only to translate words into a formal query, but also to keep execution grounded in the available database, expose missing-data cases, and avoid hiding service failures behind fluent answers.
+Natural language interfaces to databases promise to make operational data accessible without requiring every user to know a query language. This promise is especially relevant in IoT monitoring, where operators often ask routine but time-sensitive questions such as the latest temperature, a weekly carbon-dioxide trend, or a comparison between indoor and outdoor readings. IoT architectures have long emphasized pervasive sensing, cloud-backed storage, and middleware support for heterogeneous devices \cite{gubbi2013iot,botta2016cloudiot,razzaque2016middleware}. In such settings, query interfaces are not merely convenience layers: they affect how quickly operators can inspect sensor state, detect abnormal readings, and decide whether a building or device condition requires action.
 
-Most recent progress has focused on relational text-to-SQL benchmarks. Spider established cross-domain semantic parsing as a difficult generalization task with 10,181 questions over 200 databases \cite{yu2018spider}, while SParC and CoSQL extended the problem to contextual and conversational settings \cite{yu2019sparc,yu2019cosql}. Later systems improved schema linking, constrained decoding, and LLM prompting \cite{wang2020ratsql,scholak2021picard,pourreza2023dinsql,gao2023dailsql}. BIRD shifted attention toward larger, value-grounded databases and showed that strong LLMs still lag far behind human execution accuracy in realistic settings \cite{li2023bird}. However, document-oriented databases and IoT sensor stores are less represented in those benchmarks.
+The technical challenge is not only to translate words into a formal query, but also to keep execution grounded in the available database, expose missing-data cases, and avoid hiding service failures behind fluent answers. Earlier natural language database interfaces already showed that interpretation depends on schema semantics, paraphrase variation, and user interaction \cite{androutsopoulos1995nlidb,zelle1996geoquery,popescu2003precise,li2015nalir}. Modern LLMs improve language coverage, but they do not remove the need for verifiable intermediate decisions. A generated answer can be readable while still using the wrong collection, choosing an over-broad field set, normalizing time incorrectly, or silently returning no rows.
+
+Most recent progress has focused on relational text-to-SQL benchmarks. Spider established cross-domain semantic parsing as a difficult generalization task with 10,181 questions over 200 databases \cite{yu2018spider}, while SParC and CoSQL extended the problem to contextual and conversational settings \cite{yu2019sparc,yu2019cosql}. Later systems improved schema linking, constrained decoding, and LLM prompting \cite{wang2020ratsql,scholak2021picard,pourreza2023dinsql,gao2023dailsql}. BIRD shifted attention toward larger, value-grounded databases and showed that strong LLMs still lag far behind human execution accuracy in realistic settings \cite{li2023bird}. However, document-oriented databases and IoT sensor stores are less represented in those benchmarks, even though NoSQL stores are widely used for semi-structured operational data \cite{davoudian2018nosql}.
 
 This paper presents Text2Query, a hybrid natural language interface for MongoDB-backed sensor data. Text2Query separates semantic planning from database execution: an S1 decomposer maps a question into a structured QueryPlan, S2 executes that plan against MongoDB collections, S3 verbalizes the result, and S4 optionally renders visualizations. This separation lets the evaluation report what the language planner did correctly and what failed because of data availability or service access.
+
+The central research problem is therefore narrower and more operational than general text-to-SQL: can a natural language interface reliably identify the operation, collection, field set, and time scope needed for common MongoDB sensor questions, and can the benchmark make residual errors visible at the stage where they occur? This problem matters because a domain-specific interface may be useful even without solving arbitrary cross-domain query generation. For building monitoring, the most valuable system behavior is often consistent handling of a bounded operation taxonomy, transparent no-data reporting, and low-risk execution over known collections.
 
 Our contributions are:
 \begin{itemize}
@@ -41,21 +45,31 @@ Our contributions are:
 
 \subsection{Natural Language Interfaces to Databases}
 
-Natural language interfaces to databases have a long history, and survey work emphasizes that systems differ substantially in query expressiveness, required schema knowledge, and evaluation methodology \cite{affolter2019survey}. Text2Query follows this tradition but adopts a conservative engineering stance: it treats the executable query plan as an auditable intermediate artifact rather than directly evaluating only final natural language answers. This choice matters in operational databases because a fluent answer can mask a wrong collection, missing field, stale time window, or unavailable database service.
+Natural language interfaces to databases have a long history, and survey work emphasizes that systems differ substantially in query expressiveness, required schema knowledge, and evaluation methodology \cite{androutsopoulos1995nlidb,affolter2019survey}. Classical semantic parsing resources such as GeoQuery established the value of executable meaning representations and domain-specific evaluation \cite{zelle1996geoquery}. PRECISE showed that a restricted class of semantically tractable questions can be mapped reliably when lexical and schema correspondences are explicit \cite{popescu2003precise}. NaLIR later demonstrated the usefulness of interaction and parse-tree inspection for resolving ambiguity in relational querying \cite{li2015nalir}.
+
+Text2Query follows this tradition but adopts a conservative engineering stance: it treats the executable query plan as an auditable intermediate artifact rather than directly evaluating only final natural language answers. This choice matters in operational databases because a fluent answer can mask a wrong collection, missing field, stale time window, or unavailable database service. The QueryPlan is therefore closer to a diagnostic contract than to a hidden decoder state: it exposes the planner's choices before answer verbalization.
 
 \subsection{Text-to-SQL Benchmarks and LLM Methods}
 
-Spider, SParC, and CoSQL made cross-domain relational semantic parsing the dominant benchmark setting for natural language querying \cite{yu2018spider,yu2019sparc,yu2019cosql}. RAT-SQL showed the importance of relation-aware schema encoding and schema linking \cite{wang2020ratsql}; PICARD constrained autoregressive decoding so that generated outputs remain valid formal programs \cite{scholak2021picard}. More recent LLM systems such as DIN-SQL and DAIL-SQL use decomposition, example selection, and self-correction to improve execution accuracy \cite{pourreza2023dinsql,gao2023dailsql}. CHASE-SQL further uses multi-path generation and candidate selection, reporting strong BIRD benchmark results \cite{pourreza2025chase}. Text2Query borrows the same broad insight--decompose before execution--but narrows the target to a MongoDB sensor domain where practical failure reporting is central.
+WikiSQL-era models such as Seq2SQL and SQLNet showed that neural models benefit from SQL-aware structure and execution feedback, but their task settings were simpler than later cross-domain benchmarks \cite{zhong2017seq2sql,xu2017sqlnet}. Evaluation work then argued that robust text-to-SQL assessment must test generalization to unseen query patterns and realistic variable grounding rather than only paraphrase robustness \cite{finegan2018improving}. Spider, SParC, and CoSQL made cross-domain relational semantic parsing the dominant benchmark setting for natural language querying \cite{yu2018spider,yu2019sparc,yu2019cosql}; subsequent analysis showed that domain transfer remains difficult when schemas, values, and implicit conventions change \cite{suhr2020generalization}.
+
+Methodologically, recent systems repeatedly show the value of structure. IRNet introduced an intermediate representation to bridge natural language intent and SQL implementation details \cite{guo2019irnet}. Graph-based and relation-aware models encode schema structure and schema linking more explicitly \cite{bogin2019schema,wang2020ratsql}. PICARD constrained autoregressive decoding so that generated outputs remain valid formal programs \cite{scholak2021picard}. More recent LLM systems such as DIN-SQL and DAIL-SQL use decomposition, example selection, and self-correction to improve execution accuracy \cite{pourreza2023dinsql,gao2023dailsql}. Surveys of LLM-based text-to-SQL describe the same trend toward prompt engineering, retrieval, decomposition, and execution-aware evaluation \cite{rajkumar2022evaluating,shi2024survey,hong2024survey}. CHASE-SQL further uses multi-path generation and candidate selection, reporting strong BIRD benchmark results \cite{pourreza2025chase}.
+
+Text2Query borrows the broad insight that structured intermediate decisions improve controllability, but it narrows the target to a MongoDB sensor domain where practical failure reporting is central. The benchmark does not ask whether Text2Query can solve arbitrary SQL joins. Instead, it asks whether a domain-specific planner can map monitoring questions to a small operation taxonomy and known sensor schema with measurable reliability.
 
 \subsection{Natural Language Querying for NoSQL and MongoDB}
 
-The NoSQL setting is increasingly important because many operational systems use document stores rather than normalized relational schemas. DocSpider directly targets MongoDB natural language querying and notes that document-oriented NoSQL querying remains less studied than text-to-SQL \cite{ozer2025docspider}. MongoDB's own documentation also describes natural language query generation as a practical assistant feature, while warning that generated queries require care and verification \cite{mongodb2026natural}. Text2Query contributes a complementary case study: rather than building a cross-domain dataset, it evaluates a deployed-style IoT sensor interface with explicit collection, field, time, and data-hit metrics.
+The NoSQL setting is increasingly important because many operational systems use document stores rather than normalized relational schemas \cite{davoudian2018nosql}. A recent vision paper argues that natural language querying for NoSQL databases remains underexplored relative to SQL, despite the prevalence of MongoDB, Elasticsearch, and other non-relational systems \cite{zhang2024nosqlvision}. DocSpider directly targets MongoDB natural language querying and notes that document-oriented NoSQL querying remains less studied than text-to-SQL \cite{ozer2025docspider}. MultiTEND extends this line by introducing a multilingual natural-language-to-NoSQL benchmark and emphasizing lexical and structural challenges across languages \cite{qin2025multitend}. Very recent MongoDB-specific work such as EvoMQL studies execution-driven learning for NL2MQL with nested schemas and ambiguous value grounding \cite{ye2026evomql}.
 
-\section{System Design}
+MongoDB's own documentation also describes natural language query generation as a practical assistant feature, while warning that generated queries require care and verification \cite{mongodb2026natural}. Text2Query contributes a complementary case study: rather than building a cross-domain dataset, it evaluates a deployed-style IoT sensor interface with explicit collection, field, time, and data-hit metrics. This positioning makes the paper closer to an applied information-systems evaluation than to a new general-purpose benchmark.
+
+\section{Methodology}
 
 \subsection{Four-stage Pipeline}
 
 Figure~\ref{fig:architecture} summarizes Text2Query. The user supplies a natural language question. S1 maps the question to a QueryPlan containing operation type, target collections, target fields, time scope, and intent. S2 translates this plan into MongoDB operations over the available collections and returns a compact evidence context. S3 turns that context into a user-facing answer. S4 produces a chart when the plan asks for a trend, comparison, or anomaly view.
+
+The methodology is intentionally stage-wise. Rather than treating the system as a black box that maps a question directly to an answer, each stage has a narrow responsibility and a corresponding validation surface. S1 is responsible for semantic interpretation, S2 for database grounding, S3 for language realization, and S4 for visualization. This decomposition follows the broader text-to-query pattern of separating intent interpretation from executable query formation \cite{guo2019irnet,scholak2021picard}, but adapts it to a document-store setting where the main executable artifact is a small QueryPlan rather than a full SQL string.
 
 \begin{figure}[t]
 \centering
@@ -64,7 +78,7 @@ Figure~\ref{fig:architecture} summarizes Text2Query. The user supplies a natural
 \label{fig:architecture}
 \end{figure}
 
-The key design decision is the explicit intermediate representation. Direct natural language to answer generation can appear successful while silently using the wrong field or collection. A QueryPlan makes these decisions inspectable. The benchmark therefore evaluates operation accuracy, collection accuracy, field Jaccard similarity, and time-scope accuracy before evaluating whether the database returns any rows.
+The key design decision is the explicit intermediate representation. Direct natural language to answer generation can appear successful while silently using the wrong field or collection. A QueryPlan makes these decisions inspectable. The benchmark therefore evaluates operation accuracy, collection accuracy, field Jaccard similarity, and time-scope accuracy before evaluating whether the database returns any rows. This also makes the system easier to debug: a wrong operation points to intent classification, a wrong collection points to schema grounding, a low field Jaccard score points to attribute disambiguation, and a no-data result points to S2 execution or dataset coverage.
 
 \subsection{QueryPlan Contract and Validation}
 
@@ -72,11 +86,19 @@ The QueryPlan contract is deliberately small. It records the operation family, o
 
 This design also makes repair local. When the decomposer emits a plan that violates the expected schema or uses an unsupported field alias, the system can repair the plan before S2 execution rather than relying on S3 to explain an empty or malformed result. The fresh run's low repair rate shows that repair was rarely invoked, but keeping it as a distinct mechanism preserves auditability and prevents the answer generator from becoming the first place where query errors are visible.
 
+The validation logic is deterministic after S1 has produced a candidate plan. Operation names must match the supported taxonomy; collection names must belong to the known MongoDB collection set; fields are normalized through the schema vocabulary; and time scopes are reduced to benchmark labels such as recent, weekly, or last-seven-day windows. This design gives Text2Query a practical safety property: the database executor receives a bounded plan object rather than arbitrary generated database code.
+
 \subsection{MongoDB Sensor Domain}
 
 The project targets three collections. The indoor collection, \klaencol{}, stores readings such as temperature, humidity, carbon dioxide, dust, volatile organic compounds, and ozone. The office collection, \companycol{}, stores the same core environmental fields plus device metadata. The outdoor weather collection, \weathercol{}, stores weather and air-quality fields such as temperature, feels-like temperature, humidity, wind speed, precipitation, condition, air quality index, particulate matter, carbon monoxide, nitrogen dioxide, sulfur dioxide, ozone, and pressure.
 
 The supported operation taxonomy contains point lookups, range queries, trends, averages, extrema, anomaly detection, counts, comparisons, and edge cases. In benchmark notation these are DetectLatest, DetectOldest, DetectRange, DetectTrend, DetectAverage, DetectMaximum, DetectMinimum, DetectAnomaly, DetectCount, DetectCompare, and EdgeCase. The taxonomy is intentionally narrower than open-domain text-to-SQL, but it matches common monitoring questions and allows deterministic validation.
+
+\subsection{Hybrid Planning Strategy}
+
+Text2Query combines LLM-based interpretation with deterministic schema validation and regex-style fallback behavior. The LLM planner handles the semantic mapping from user phrasing to operation family and candidate fields, while the deterministic layer checks whether the output is executable in the local MongoDB sensor schema. The ablation study isolates this design choice by comparing the full system, an LLM-only score, and a regex-only planner.
+
+This hybrid strategy is motivated by the error profile of operational sensor queries. Some questions are simple keyword matches, such as asking for the latest temperature. Others require semantic interpretation, such as distinguishing earliest readings from minimum values, abnormal readings from maximum values, or a count request from a trend request. A deterministic parser is attractive for latency, but the benchmark tests whether it can preserve intent accuracy across these less literal forms.
 
 \section{Experimental Setup}
 
@@ -86,17 +108,31 @@ The primary evidence is a fresh full benchmark run executed on 2026-05-02 from t
 
 The second evidence source is an ablation run over the same 205 questions, producing \path{benchmark_ablation_20260502.json}. This run compares three S1 planning variants: the full pipeline, an LLM-only score that treats regex fallback as failure, and a regex-only parser with schema validation. The full and LLM-only scores share one decomposer call per question in the implementation, so differences would appear only when the full path relies on regex fallback.
 
-Dependencies were installed in an isolated \texttt{uv} environment, and the same benchmark code path was used for the full run and ablation. Visualizations in this paper were regenerated from these two JSON artifacts rather than from the older sample figure set.
+Dependencies were installed in an isolated \texttt{uv} environment, and the same benchmark code path was used for the full run and ablation. Visualizations in this paper were regenerated from these two JSON artifacts rather than from the older sample figure set. This matters for reproducibility because earlier figures in the project reflected partial or stale runs; the current manuscript uses the rerun artifacts as the source of truth.
+
+\subsection{Benchmark Design}
+
+The benchmark contains 205 natural language questions distributed across 11 operation groups. The groups cover common monitoring intents: latest value, oldest value, range lookup, trend, average, maximum, minimum, anomaly detection, count, comparison, and edge cases. Each question has an expected operation label, expected collection set, expected field set, and expected time scope. These labels make the benchmark more diagnostic than final-answer evaluation alone because they expose which part of semantic planning failed.
+
+The benchmark is domain-specific by design. It does not try to reproduce the breadth of Spider or BIRD \cite{yu2018spider,li2023bird}; instead, it stresses a fixed MongoDB sensor schema with repeated paraphrases and operational edge cases. This reflects the intended deployment pattern: a building or laboratory operator will typically query a known set of sensor streams repeatedly, but will phrase requests in different ways and may ask broad questions such as ``compare all sensors'' or ``show pressure this week.''
 
 \subsection{Metrics}
 
 For S1, operation and time-scope accuracy are exact-match metrics. Collection accuracy is exact set match against expected collections. Field extraction is measured as Jaccard similarity between predicted and expected field sets, which gives partial credit when the planner includes a correct field but adds extra fields. S2 data hit rate measures whether the executor returned data. It is not treated as a pure planning metric because it depends on database reachability and time alignment.
+
+Latency is reported separately for total runtime, S1 planning, and S2 execution. This split is important because LLM-based text-to-query systems often trade accuracy for response time \cite{rajkumar2022evaluating,shi2024survey}. In Text2Query, S1 dominates latency, while S2 is a small fraction of total runtime once the MongoDB endpoint is reachable. The ablation therefore reports both accuracy and latency so that the regex-only baseline is not dismissed solely because it is less accurate.
+
+\subsection{Ablation Protocol}
+
+The ablation evaluates whether Text2Query's LLM planner contributes beyond deterministic parsing. The full condition measures the implemented S1 path with validation and repair. The LLM-only condition scores the LLM-derived plan without awarding credit for regex fallback. The regex-only condition bypasses the LLM and attempts to infer operation, fields, collections, and time scope using deterministic rules. Because the full and LLM-only rows share the same decomposer call in this implementation, identical scores mean that the rerun did not require scored fallback behavior, not that validation is unnecessary.
 
 \section{Results}
 
 \subsection{Full Benchmark}
 
 Table~\ref{tab:main-results} reports the fresh 205-question benchmark. The S1 decomposer solved every operation classification case, with the lower bound of the 95\% confidence interval at 98.16\%. Collection selection and time-scope parsing were also high at 95.6\% and 96.6\%, while field extraction was lower at 87.4\% average Jaccard. S2 returned data for 99.5\% of questions, with only one no-data case in the full run.
+
+The most important result is the gap between operation classification and field-level grounding. Operation accuracy indicates that the planner usually understands the user's high-level intent, but field Jaccard reveals that this does not automatically imply perfect attribute selection. This distinction is important for sensor databases: a user may ask a correct DetectTrend question, but the answer is still operationally misleading if the planner chooses temperature when the intended field is pressure or if it expands a specific request into all environmental fields.
 
 \begin{table}[t]
 \centering
@@ -127,6 +163,8 @@ Average S2 latency & 9.1 ms \\
 \end{table}
 
 Table~\ref{tab:by-operation} shows that operation recognition was perfect across all groups. The remaining collection-selection weaknesses concentrate in DetectCompare and EdgeCase. These groups often require reasoning over all sensor locations or interpreting broad requests such as ``sensor data'', where omitting the weather collection is a plausible but incorrect narrowing.
+
+The by-operation view also clarifies that the benchmark is not dominated by a single easy operation family. The longest-latency groups are DetectOldest, DetectMinimum, and EdgeCase, suggesting that some prompts require longer planner deliberation even when the final operation is correct. The accuracy pattern is more favorable than the latency pattern: the slow groups are not necessarily inaccurate, but they expose the runtime cost of relying on the LLM planner for routine monitoring queries.
 
 \begin{table}[t]
 \centering
@@ -179,6 +217,8 @@ Table~\ref{tab:ablation} reports the 205-question ablation. Because this ablatio
 
 The per-group ablation results clarify where the LLM planner adds value. Regex-only parsing reaches 100.0\% operation accuracy for explicit tasks such as DetectLatest, DetectTrend, DetectAverage, DetectMaximum, and DetectMinimum, but it falls to 40.0\% for DetectOldest, 30.0\% for DetectAnomaly, and 75.0\% for DetectCount. These failures are not random formatting errors; they reflect ambiguous linguistic cues such as ``earliest'', ``abnormal'', or ``how many'' that require mapping to the operation taxonomy. The ablation therefore supports a practical hybrid interpretation: use deterministic schema validation and repair for safety, but keep the LLM planner for semantic operation selection.
 
+The identical full and LLM-only rows should be interpreted carefully. They show that the observed gains over regex-only parsing come from the LLM planner in this run, while deterministic validation and repair remain part of the system contract. Their value is preventive: they constrain the shape of the plan that reaches S2 and provide a place to catch unsupported fields or collections. This is consistent with constrained and structured generation work in text-to-SQL, where validity mechanisms improve reliability even when the main semantic signal comes from a neural or LLM component \cite{scholak2021picard,hong2024survey}.
+
 \begin{table}[t]
 \centering
 \scriptsize
@@ -206,6 +246,8 @@ Regex-only & 205 & 0.815 & 0.937 & 0.873 & 0.980 & 0.1 \\
 
 The fresh full benchmark error taxonomy shows three main patterns. First, broad all-location requests can omit the outdoor weather collection. Second, field extraction degrades when questions mention pressure or generic sensor data; several cases predict a default temperature field or expand to many fields. Third, weekly time expressions such as ``this week'' and ``last week'' can be normalized inconsistently as \texttt{last\_7d}. Only one S2 no-data case appears in the fresh full run, so execution availability is no longer the dominant limitation.
 
+These errors are actionable because they map to specific engineering fixes. Broad collection failures suggest adding explicit all-location exemplars and a rule that generic environmental comparisons include indoor, office, and weather collections unless the user restricts the scope. Field errors suggest improving the schema alias table for pressure, air quality, and generic sensor terms. Time-scope errors suggest separating calendar-week interpretation from rolling-window interpretation. The benchmark therefore functions as both an evaluation and a debugging instrument.
+
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.92\linewidth]{figures/errortaxonomy.png}
@@ -230,17 +272,25 @@ The second supported claim is that execution must be evaluated independently. A 
 
 The ablation study supports the hybrid design. Regex-only parsing is nearly instantaneous and performs reasonably on collections, fields, and time scopes, but it misses many operation intents. The LLM-based planner closes most of that operation gap, raising operation accuracy from 81.5\% to 99.5\% in the ablation run. The cost is latency: average S1 planning remains about 26 seconds per question, so caching, prompt optimization, or a smaller planner model is necessary for interactive deployment.
 
+The result also refines the paper's novelty claim. Text2Query is not presented as a universal replacement for text-to-SQL systems or as a new cross-domain benchmark. Its novelty is the combination of a MongoDB sensor-query contract, stage-wise evaluation, and an ablation that quantifies the tradeoff between deterministic parsing and LLM semantic planning. This is a practical contribution for operational sensor databases, where correctness is often about choosing the right stream and time window rather than producing arbitrarily complex joins.
+
 \subsection{Scope of Claims}
 
 The full benchmark skipped S3 and S4, so this paper reports S1 planning and S2 data-hit behavior for that run rather than final answer quality or chart-rendering quality. The visualizations in this manuscript are offline analysis figures generated from the benchmark and ablation JSON files; they are not evidence that S4 chart rendering succeeded during the full benchmark. The benchmark is domain-specific and evaluates the MongoDB sensor operation taxonomy described above.
 
 The strongest version of the claim is therefore architectural rather than universal: Text2Query shows that a small, auditable QueryPlan can make natural language access to a MongoDB sensor store measurable at the decision level. The paper does not claim cross-domain generalization to arbitrary databases, nor does it claim that final user-facing answers have been evaluated end to end. This framing matters for venue fit: the contribution is best positioned as an applied information-systems or sensor-data interface study, not as a new general-purpose text-to-SQL benchmark.
 
+This scope is deliberate. Cross-domain systems such as Spider- and BIRD-oriented methods optimize for broad schema transfer \cite{yu2018spider,li2023bird}; Text2Query instead optimizes for repeatable operation over a known sensor database. The evaluation therefore prioritizes diagnostic stage metrics over leaderboard-style execution accuracy. For reviewers, the key question should be whether the paper makes a useful applied contribution under this scope, not whether it outperforms unrelated SQL parsers on relational benchmarks that were not evaluated.
+
 \subsection{Practical Implications}
 
 The results suggest a deployment strategy. First, keep a structured QueryPlan visible in logs and, when appropriate, in user-facing explanations. Second, distinguish planner failures from execution failures. Third, cache or optimize S1 calls because planner latency dominates the run. Fourth, add targeted rules or examples for all-sensor, pressure, air-quality, and generic sensor-data questions, because these account for most remaining collection and field mistakes.
 
 For a production deployment, the most immediate engineering improvement is latency control. The benchmark shows that S2 database access takes only 9.1 ms on average, while S1 planning takes about 26.5 seconds. A cached plan library for repeated monitoring questions, a smaller planner model for routine operation classes, and routing regex-confident questions away from the LLM would preserve most of the measured accuracy while reducing response time.
+
+The second engineering improvement is targeted schema grounding. The field-error cases suggest that the system needs stronger aliases and examples for environmental variables whose names overlap across indoor and outdoor contexts. In practice, this could be implemented as a schema dictionary with preferred field groups, collection-specific synonyms, and explicit handling of broad phrases such as ``all sensors'' or ``air quality.'' These changes do not require new model training and can be validated directly against the existing benchmark.
+
+The third improvement is extending evaluation to S3 and S4. Once S1 and S2 are stable, the next research question is whether generated answers accurately summarize the returned evidence and whether chart generation faithfully reflects the query plan. That extension would make the evaluation end-to-end while preserving the stage-wise diagnostics that make the current benchmark interpretable.
 
 \section{Conclusion}
 
@@ -252,6 +302,26 @@ Text2Query demonstrates that a hybrid natural language interface can map IoT sen
 K. Affolter, K. Stockinger, and A. Bernstein.
 A comparative survey of recent natural language interfaces for databases.
 \emph{The VLDB Journal}, 28:793--819, 2019.
+
+\bibitem{androutsopoulos1995nlidb}
+I. Androutsopoulos, G. D. Ritchie, and P. Thanisch.
+Natural language interfaces to databases: An introduction.
+\emph{Natural Language Engineering}, 1(1):29--81, 1995.
+
+\bibitem{zelle1996geoquery}
+J. M. Zelle and R. J. Mooney.
+Learning to parse database queries using inductive logic programming.
+In \emph{Proceedings of AAAI}, 1996.
+
+\bibitem{popescu2003precise}
+A.-M. Popescu, O. Etzioni, and H. Kautz.
+Towards a theory of natural language interfaces to databases.
+In \emph{Proceedings of IUI}, 2003.
+
+\bibitem{li2015nalir}
+F. Li and H. V. Jagadish.
+Constructing an interactive natural language interface for relational databases.
+\emph{Proceedings of the VLDB Endowment}, 8(1):73--84, 2014.
 
 \bibitem{yu2018spider}
 T. Yu, R. Zhang, K. Yang, M. Yasunaga, D. Wang, Z. Li, J. Ma, I. Li, Q. Yao, S. Roman, Z. Zhang, and D. Radev.
@@ -268,10 +338,40 @@ T. Yu, R. Zhang, H. Y. Er, S. Li, E. Xue, B. Pang, X. V. Lin, Y. C. Tan, T. Shi,
 CoSQL: A conversational text-to-SQL challenge towards cross-domain natural language interfaces to databases.
 In \emph{Proceedings of EMNLP-IJCNLP}, 2019.
 
+\bibitem{zhong2017seq2sql}
+V. Zhong, C. Xiong, and R. Socher.
+Seq2SQL: Generating structured queries from natural language using reinforcement learning.
+\emph{arXiv preprint arXiv:1709.00103}, 2017.
+
+\bibitem{xu2017sqlnet}
+X. Xu, C. Liu, and D. Song.
+SQLNet: Generating structured queries from natural language without reinforcement learning.
+\emph{arXiv preprint arXiv:1711.04436}, 2017.
+
+\bibitem{finegan2018improving}
+C. Finegan-Dollak, J. K. Kummerfeld, L. Zhang, K. Ramanathan, S. Sadasivam, R. Zhang, and D. Radev.
+Improving text-to-SQL evaluation methodology.
+In \emph{Proceedings of ACL}, pages 351--360, 2018.
+
+\bibitem{suhr2020generalization}
+A. Suhr, M.-W. Chang, P. Shaw, and K. Lee.
+Exploring unexplored generalization challenges for cross-database semantic parsing.
+In \emph{Proceedings of ACL}, pages 8372--8388, 2020.
+
 \bibitem{wang2020ratsql}
 B. Wang, R. Shin, X. Liu, O. Polozov, and M. Richardson.
 RAT-SQL: Relation-aware schema encoding and linking for text-to-SQL parsers.
 In \emph{Proceedings of ACL}, 2020.
+
+\bibitem{guo2019irnet}
+J. Guo, Z. Zhan, Y. Gao, Y. Xiao, J.-G. Lou, T. Liu, and D. Zhang.
+Towards complex text-to-SQL in cross-domain database with intermediate representation.
+In \emph{Proceedings of ACL}, 2019.
+
+\bibitem{bogin2019schema}
+B. Bogin, M. Gardner, and J. Berant.
+Representing schema structure with graph neural networks for text-to-SQL parsing.
+In \emph{Proceedings of ACL}, pages 4560--4565, 2019.
 
 \bibitem{scholak2021picard}
 T. Scholak, N. Schucher, and D. Bahdanau.
@@ -293,20 +393,70 @@ D. Gao, H. Wang, Y. Li, X. Sun, Y. Qian, B. Ding, and J. Zhou.
 Text-to-SQL empowered by large language models: A benchmark evaluation.
 \emph{arXiv preprint arXiv:2308.15363}, 2023.
 
+\bibitem{rajkumar2022evaluating}
+N. Rajkumar, R. Li, and D. Bahdanau.
+Evaluating the text-to-SQL capabilities of large language models.
+\emph{arXiv preprint arXiv:2204.00498}, 2022.
+
+\bibitem{shi2024survey}
+L. Shi, Z. Tang, N. Zhang, X. Zhang, and Z. Yang.
+A survey on employing large language models for text-to-SQL tasks.
+\emph{ACM Computing Surveys}, 2025.
+
+\bibitem{hong2024survey}
+Z. Hong, Z. Yuan, Q. Zhang, H. Chen, J. Dong, F. Huang, and X. Huang.
+Next-generation database interfaces: A survey of LLM-based text-to-SQL.
+\emph{CoRR abs/2406.08426}, 2024.
+
 \bibitem{pourreza2025chase}
 M. Pourreza, H. Li, R. Sun, Y. Chung, S. Talaei, G. T. Kakkar, Y. Gan, A. Saberi, F. Ozcan, and S. O. Arik.
 CHASE-SQL: Multi-path reasoning and preference optimized candidate selection in text-to-SQL.
 In \emph{International Conference on Learning Representations}, 2025.
+
+\bibitem{davoudian2018nosql}
+A. Davoudian, L. Chen, and M. Liu.
+A survey on NoSQL stores.
+\emph{ACM Computing Surveys}, 51(2):1--43, 2018.
+
+\bibitem{zhang2024nosqlvision}
+W. Zhang, T. Shi, and P. Wang.
+Natural language querying on NoSQL databases: Opportunities and challenges.
+In \emph{Proceedings of IEEE BigData}, pages 3353--3357, 2024.
 
 \bibitem{ozer2025docspider}
 A. G. Ozer, R. F. Cekinel, I. H. Toroslu, and P. Karagoz.
 DocSpider: A dataset of cross-domain natural language querying for MongoDB.
 \emph{Natural Language Processing}, 31(6):1367--1398, 2025.
 
+\bibitem{qin2025multitend}
+Z. Qin, Y. Song, J. Lu, Y. Song, S. Li, and C. J. Zhang.
+MultiTEND: A multilingual benchmark for natural language to NoSQL query translation.
+In \emph{Findings of ACL}, 2025.
+
+\bibitem{ye2026evomql}
+M. Ye, J. Zhuang, M. Xu, L. Zhang, G. Ke, and H. Cai.
+Draft-refine-optimize: Self-evolved learning for natural language to MongoDB query generation.
+\emph{arXiv preprint arXiv:2604.13045}, 2026.
+
 \bibitem{mongodb2026natural}
 MongoDB.
 Natural language to MongoDB queries.
 MongoDB Documentation, accessed 2026-05-02.
+
+\bibitem{gubbi2013iot}
+J. Gubbi, R. Buyya, S. Marusic, and M. Palaniswami.
+Internet of Things (IoT): A vision, architectural elements, and future directions.
+\emph{Future Generation Computer Systems}, 29(7):1645--1660, 2013.
+
+\bibitem{botta2016cloudiot}
+A. Botta, W. de Donato, V. Persico, and A. Pescape.
+Integration of cloud computing and Internet of Things: A survey.
+\emph{Future Generation Computer Systems}, 56:684--700, 2016.
+
+\bibitem{razzaque2016middleware}
+M. A. Razzaque, M. Milojevic-Jevric, A. Palade, and S. Clarke.
+Middleware for Internet of Things: A survey.
+\emph{IEEE Internet of Things Journal}, 3(1):70--95, 2016.
 
 \end{thebibliography}
 
