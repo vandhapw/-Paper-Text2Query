@@ -1,24 +1,42 @@
-% SoftwareX Original Article — Text2Query
-% Target: SoftwareX (Elsevier), 3000-word limit, max 6 figures
+%%
+%% Copyright 2026 Elsevier Ltd
+%%
+%% This file is part of the 'Elsarticle Bundle'.
+%% ---------------------------------------------
+%%
+%% Template article for Elsevier's document class `elsarticle`
+%% with numbered style bibliographic references
+%% Adapted for SoftwareX submission: Text2Query
+
 \documentclass[preprint,12pt,a4paper]{elsarticle}
 
+%% Use the option review to obtain double line spacing
+%% \documentclass[authoryear,preprint,review,12pt]{elsarticle}
+
+%% For including figures, graphicx.sty has been loaded in
+%% elsarticle.cls. If you prefer to use the old commands
+%% please give \usepackage{epsfig}
+
+%% The amssymb package provides various useful mathematical symbols
 \usepackage{amssymb}
 \usepackage{hyperref}
 \usepackage{graphicx}
 \usepackage{booktabs}
-\usepackage{float}
 \usepackage{listings}
 \usepackage{xcolor}
-\usepackage{tikz}
-\usetikzlibrary{shapes.geometric,arrows.meta,positioning,fit,backgrounds}
 \usepackage{url}
 
 \setlength{\parindent}{0pt}
-\addtolength{\parskip}{4pt}
+
+%% The lineno packages adds line numbers. Start line numbering with
+%% \begin{linenumbers}, end it with \end{linenumbers}. Or switch it on
+%% for the whole article with \linenumbers.
+%\usepackage{lineno}
 
 \journal{SoftwareX}
 
 \begin{document}
+\renewcommand{\labelenumii}{\arabic{enumi}.\arabic{enumii}}
 
 \begin{frontmatter}
 
@@ -35,7 +53,7 @@
 \address[C]{Division of Computer Engineering and AI, Pukyong National University, Busan 48513, Republic of Korea}
 \address[D]{Research Center, Hanyoung DS, Inc., Seoul 07600, Republic of Korea}
 
-\cortext[cor]{Corresponding author. Email: vandhapw@pukyong.ac.kr}
+\cortext[cor]{Corresponding author.}
 
 \begin{abstract}
 Text2Query is a four-stage open-source pipeline that translates natural language questions about IoT sensor data into structured MongoDB queries, generates natural language answers, and optionally produces visualizations. The pipeline comprises: (S1) a decomposer that uses large language model (LLM) inference with regex fallback to parse questions into a structured QueryPlan; (S2) a query executor that translates the plan into MongoDB aggregation pipelines with time-aware filtering; (S3) an answer generator that produces natural language responses; and (S4) a visualization module that auto-generates context-appropriate charts. Evaluated on 205 benchmark questions spanning 10 operation types across three sensor collections, Text2Query achieves 100\% operation detection accuracy, 96.1\% collection identification, and 87.6\% field extraction (Jaccard similarity). The system handles statistical aggregation, anomaly detection, trend analysis, and cross-collection comparison---operations absent from existing text-to-SQL tools. Source code is available at \url{https://github.com/vandhapw/Text2Query}.
@@ -47,38 +65,40 @@ Natural language querying \sep IoT sensor data \sep MongoDB \sep Text-to-query \
 
 \end{frontmatter}
 
-%% ============================================================
-%% MANDATORY: Code Metadata table
-%% ============================================================
-\begin{table}[H]
-\centering
-\caption{Code Metadata.}
-\label{tab:code-metadata}
-\begin{tabular}{|l|p{10cm}|}
+%\linenumbers
+
+\section*{Required Metadata}
+
+\section*{Current code version}
+
+\begin{table}[!h]
+\begin{tabular}{|l|p{6.5cm}|p{6.5cm}|}
 \hline
-\textbf{\#} & \textbf{Metadata} \\
+\textbf{Nr.} & \textbf{Code metadata description} & \textbf{Please fill in this column} \\
 \hline
-C1 & Current code version: v1.0.0 \\
+C1 & Current code version & v1.0.0 \\
 \hline
-C2 & Permanent link to code/repository: \url{https://github.com/vandhapw/Text2Query} \\
+C2 & Permanent GitHub link to code/repository used for this code version & \url{https://github.com/vandhapw/Text2Query} \\
 \hline
-C3 & Legal Code License: MIT License \\
+C3 & Legal Code License & MIT License \\
 \hline
-C4 & Code versioning system: Git \\
+C4 & Code versioning system used & Git \\
 \hline
-C5 & Software code languages, tools, services used: Python 3.11+, MongoDB, Ollama LLM runtime, Plotly~\cite{plotly}, Pandas~\cite{mckinney2010pandas}, NumPy \\
+C5 & Software code languages, tools, and services used & Python 3.11+, MongoDB~\cite{mongodb}, Ollama LLM runtime, Plotly~\cite{plotly}, Pandas~\cite{mckinney2010pandas}, NumPy \\
 \hline
-C6 & Compilation requirements, operating environments \& dependencies: Python $\geq$ 3.11, MongoDB $\geq$ 6.0~\cite{mongodb}, Ollama (optional for cloud LLM); see \texttt{requirements.txt} \\
+C6 & Compilation requirements, operating environments \& dependencies & Python $\geq$ 3.11, MongoDB $\geq$ 6.0, Ollama (optional for cloud LLM); see \texttt{requirements.txt} in the repository \\
 \hline
-C7 & Link to developer documentation/manual: \url{https://github.com/vandhapw/Text2Query\#readme} \\
+C7 & If available Link to developer documentation/manual & \url{https://github.com/vandhapw/Text2Query\#readme} \\
 \hline
-C8 & Support email: vandhapw@pukyong.ac.kr \\
+C8 & Support email for questions & vandhapw@pukyong.ac.kr \\
 \hline
 \end{tabular}
+\caption{Code metadata (mandatory)}
+\label{tab:code-metadata}
 \end{table}
 
 %% ============================================================
-%% Section 1: Motivation and significance
+%% Section 1
 %% ============================================================
 \section{Motivation and significance}
 
@@ -86,12 +106,12 @@ IoT sensor deployments generate massive volumes of multivariate time-series data
 
 Large language models (LLMs) built on the Transformer architecture~\cite{vaswani2017attention}---including GPT-4~\cite{openai2023gpt4}, Qwen~\cite{bai2023qwen}, Code Llama~\cite{roziere2023codellama}, and DeepSeek-Coder~\cite{guo2024deepseekcoder}---can synthesize database queries from natural language. Yet LLM-only approaches suffer from hallucination and lack deterministic fallback when the model produces invalid queries. Constrained decoding~\cite{scholak2021picard} partially addresses reliability, but production deployments require a hybrid strategy combining LLM flexibility with rule-based robustness.
 
-Meanwhile, IoT platforms~\cite{gubbi2013iot,alfuqaha2015iot} increasingly rely on NoSQL stores such as MongoDB~\cite{mongodb} and InfluxDB~\cite{influxdb} for sensor data, with monitoring tools like Grafana~\cite{grafana} providing dashboard-based visualization that still requires manual query construction. No existing platform offers end-to-end natural language querying of sensor data with automatic visualization.
+Meanwhile, IoT platforms~\cite{gubbi2013iot,alfuqaha2015iot} increasingly rely on NoSQL stores such as MongoDB~\cite{mongodb} and InfluxDB~\cite{influxdb} for sensor data, with monitoring tools like Grafana~\cite{grafana} providing dashboard-based visualization that still requires manual query construction. Indoor air quality monitoring~\cite{who2010iaq} exemplifies the gap: building managers need to query CO$_2$ levels, detect anomalies, and compare indoor/outdoor conditions---operations that cannot be expressed as a single SQL query.
 
 Text2Query addresses this gap through a four-stage pipeline with a \emph{QueryPlan} intermediate representation that maps ten IoT-specific operation types to MongoDB aggregation pipelines. Evaluated on 205 benchmark questions, it achieves 100\% operation detection, 96.1\% collection identification, and 87.6\% field extraction, demonstrating that non-technical users can query IoT sensor data in natural language without learning database syntax.
 
 %% ============================================================
-%% Section 2: Software description
+%% Section 2
 %% ============================================================
 \section{Software description}
 
@@ -145,26 +165,26 @@ from s1_decomposer import Decomposer
 from s2_query import QueryExecutor
 
 decomposer = Decomposer()
-executor = QueryExecutor()
+executor  = QueryExecutor()
 
 # S1: Decompose natural language into QueryPlan
 plan = decomposer.decompose(
     "What is the average CO2 in the office this week?"
 )
-# plan.operation = "DetectAverage"
-# plan.collections = ["plalion_company_sensor"]
-# plan.fields = ["co2"]
-# plan.time_scope = "this_week"
+# plan.operation   = "DetectAverage"
+# plan.collections  = ["plalion_company_sensor"]
+# plan.fields       = ["co2"]
+# plan.time_scope   = "this_week"
 
 # S2: Execute QueryPlan against MongoDB
 result = executor.execute(plan)
 print(result)
-# { "co2_avg": 487.3, "unit": "ppm",
-#   "period": "2026-05-05 to 2026-05-11" }
+# {"co2_avg": 487.3, "unit": "ppm",
+#  "period": "2026-05-05 to 2026-05-11"}
 \end{lstlisting}
 
 %% ============================================================
-%% Section 3: Illustrative examples
+%% Section 3
 %% ============================================================
 \section{Illustrative examples}
 
@@ -209,7 +229,7 @@ Fig.~\ref{fig:confusion} confirms near-diagonal operation classification with on
 \end{figure}
 
 %% ============================================================
-%% Section 4: Impact
+%% Section 4
 %% ============================================================
 \section{Impact}
 
@@ -222,7 +242,7 @@ The modular four-stage architecture allows component replacement: users can swap
 The open-source release on GitHub enables community adoption and extension across smart building management, indoor air quality monitoring~\cite{who2010iaq}, environmental compliance, and industrial IoT domains.
 
 %% ============================================================
-%% Section 5: Conclusions
+%% Section 5
 %% ============================================================
 \section{Conclusions}
 
@@ -230,19 +250,113 @@ Text2Query is a four-stage open-source pipeline for querying IoT sensor data in 
 
 Current limitations include: (1) S2 data hit rate (63.9\%) is limited by time-scoped queries referencing current dates against historical data; (2) cloud LLM latency ($\sim$44\,s) dominates end-to-end response time; (3) evaluation covers only three MongoDB collections in the indoor air quality domain; cross-domain evaluation remains future work. A planned user study would provide qualitative validation of natural language interpretation quality.
 
-%% ============================================================
-%% Declarations
-%% ============================================================
 \section*{Declaration of generative AI and AI-assisted technologies}
+
 During the preparation of this work the authors used Claude (Anthropic) for code development assistance and manuscript drafting. After using this tool, the authors reviewed and edited the content as needed and take full responsibility for the content of the publication.
 
 \section*{CRediT authorship contribution statement}
+
 \textbf{Vandha Pradwiyasma Widartha:} Conceptualization, Software, Methodology, Writing -- original draft, Investigation. \textbf{Ifrina Nuritha:} Formal analysis, Validation, Writing -- review and editing. \textbf{Kyung Hyune Rhee:} Supervision, Writing -- review and editing. \textbf{Young Po Hwang:} Resources, Data curation. \textbf{Chang Soo Kim:} Supervision, Project administration, Funding acquisition.
 
 \section*{Acknowledgements}
+
 This work was supported by the Ministry of Education of the Republic of Korea and the National Research Foundation of Korea (NRF) [grant number to be added].
 
-\bibliographystyle{elsarticle-num}
-\bibliography{refs}
+\begin{thebibliography}{30}
+
+\bibitem{yu2018spider}
+Yu, T., Zhang, R., Yang, K., Yasunaga, M., Wang, D., Li, Z., Ma, J., Li, I., Yao, Q., Roman, S., Zhang, Z., Radev, D., Spider: A large-scale human-labeled dataset for complex and cross-domain semantic parsing and text-to-SQL task, in: Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing, 2018, pp.~391--401.
+
+\bibitem{pourreza2024dinsql}
+Pourreza, M., Rafiei, D., DIN-SQL: Decomposed in-context learning of text-to-SQL with self-correction, in: Advances in Neural Information Processing Systems, 2024.
+
+\bibitem{gan2021natsql}
+Gan, Y., Chen, X., Purver, M., NatSQL: Making SQL easier to infer from natural language specifications, in: Findings of the Association for Computational Linguistics: ACL-IJCNLP 2021, 2021, pp.~3513--3525.
+
+\bibitem{yu2019sparc}
+Yu, T., Zhang, R., Er, M., Li, S., Xue, Y., Radev, D., SParC: Cross-domain semantic parsing in context, in: Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics, 2019, pp.~4554--4565.
+
+\bibitem{yu2019cosql}
+Yu, T., Zhang, R., Yasunaga, M., Zhang, Y., Xue, Y., Radev, D., CoSQL: A conversational text-to-SQL task, in: Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing, 2019, pp.~556--567.
+
+\bibitem{wang2020ratsql}
+Wang, B., Shin, R., Liu, X., Lin, M., Sun, Y., Ren, X., RAT-SQL: Relation-aware schema encoding and linking for text-to-SQL, in: Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics, 2020, pp.~7432--7444.
+
+\bibitem{lin2020bridge}
+Lin, X.V., Socher, R., Xiong, C., Bridging textual and tabular data for cross-domain semantic parsing, in: Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing, 2020, pp.~411--425.
+
+\bibitem{zhong2017seq2sql}
+Zhong, V., Xiong, C., Socher, R., Seq2SQL: Generating structured queries from natural language using reinforcement learning, arXiv preprint arXiv:1709.00103 (2017).
+
+\bibitem{xie2022t5sql}
+Xie, T., Zhou, Y., Dong, Y., Liu, H., Sun, J., Sun, M., T5-3B for text-to-SQL: An empirical study, in: Findings of the Association for Computational Linguistics: EMNLP 2022, 2022.
+
+\bibitem{bai2023qwen}
+Bai, J., Bai, S., Chu, Y., Cui, Z., Dang, K., Deng, X., Fan, Y., Ge, W., Han, Y., Huang, F., et al., Qwen technical report, arXiv preprint arXiv:2309.16609 (2023).
+
+\bibitem{roziere2023codellama}
+Rozi\`ere, B., Gehring, J., Gloeckle, F., Sootla, S., Gat, I., Tan, X.E., Adi, Y., Liu, J., Remez, T., Eren, J., et al., Code Llama: Open foundation models for code, arXiv preprint arXiv:2308.12950 (2023).
+
+\bibitem{openai2023gpt4}
+OpenAI, GPT-4 technical report, arXiv preprint arXiv:2303.08774 (2023).
+
+\bibitem{guo2024deepseekcoder}
+Guo, D., Zhu, Q., Bao, N., et al., DeepSeek-Coder: When the large language model meets programming, arXiv preprint arXiv:2401.14196 (2024).
+
+\bibitem{chen2021evaluating}
+Chen, M., Tworek, J., Jun, H., Yuan, Q., Pinto, M., et al., Evaluating large language models trained on code, arXiv preprint arXiv:2107.03374 (2021).
+
+\bibitem{touvron2023llama}
+Touvron, H., Lavril, T., Izacard, G., Martinet, X., Lachaux, M.-A., Lacroix, T., Rozi\`ere, B., Goyal, N., Hambro, E., Azhar, F., et al., LLaMA: Open and efficient foundation language models, arXiv preprint arXiv:2302.13971 (2023).
+
+\bibitem{scholak2021picard}
+Scholak, T., Schucher, N., Pal, C., PICARD: Parsing incrementally for constrained auto-regressive decoding from language models, in: Proceedings of the 2021 Conference on Empirical Methods in Natural Language Processing, 2021, pp.~639--649.
+
+\bibitem{vaswani2017attention}
+Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A.N., Kaiser, \L., Polosukhin, I., Attention is all you need, in: Advances in Neural Information Processing Systems, 2017, pp.~5998--6008.
+
+\bibitem{gubbi2013iot}
+Gubbi, J., Buyya, R., Marusic, S., Palaniswami, M., Internet of Things (IoT): A vision, architectural elements, and future directions, Future Generation Computer Systems 29 (7) (2013) 1645--1660.
+
+\bibitem{alfuqaha2015iot}
+Al-Fuqaha, A., Guizani, M., Mohammadi, M., Aledhari, M., Ayyash, M., Internet of Things: A survey on enabling technologies, protocols, and applications, IEEE Communications Surveys \& Tutorials 17 (4) (2015) 2347--2376.
+
+\bibitem{influxdb}
+InfluxData, Inc., InfluxDB documentation, \url{https://docs.influxdata.com/}, 2024.
+
+\bibitem{mongodb}
+MongoDB, Inc., MongoDB documentation, \url{https://docs.mongodb.com/}, 2024.
+
+\bibitem{grafana}
+Grafana Labs, Grafana: The open observability platform, \url{https://grafana.com/}, 2024.
+
+\bibitem{who2010iaq}
+World Health Organization, WHO guidelines for indoor air quality: Selected pollutants, WHO, Bonn, 2010.
+
+\bibitem{androutsopoulos1995nlidb}
+Androutsopoulos, I., Ritchie, G.D., Thanisch, P., Natural language interfaces to databases -- An introduction, Natural Language Engineering 1 (1) (1995) 29--81.
+
+\bibitem{affolter2019comparative}
+Affolter, K., Stockinger, K., Bernstein, A., A comparative survey of recent natural language interfaces for databases, The VLDB Journal 28 (2019) 793--819.
+
+\bibitem{li2014constructing}
+Li, F., Jagadish, H.V., Constructing interactive natural language interfaces to databases, in: Proceedings of the 2014 ACM SIGMOD International Conference on Management of Data, 2014, pp.~1615--1618.
+
+\bibitem{katsogiannis2023survey}
+Katsogiannis-Meimarakis, G., Koutrika, G., A survey on deep learning approaches for text-to-SQL, The VLDB Journal 32 (2023) 905--936.
+
+\bibitem{plotly}
+Plotly Technologies Inc., Plotly: Open source graphing library for Python, \url{https://plotly.com/python/}, 2024.
+
+\bibitem{mckinney2010pandas}
+McKinney, W., Data structures for statistical computing in Python, in: Proceedings of the 9th Python in Science Conference, 2010, pp.~56--61.
+
+\bibitem{raffel2020t5}
+Raffel, C., Shazeer, N., Roberts, A., Lee, K., Narang, S., Matena, M., Zhou, Y., Li, W., Liu, P.J., Exploring the limits of transfer learning with a unified text-to-text transformer, Journal of Machine Learning Research 21 (2020) 1--67.
+
+\end{thebibliography}
+
+\section*{Current executable software version}
 
 \end{document}
+\endinput
