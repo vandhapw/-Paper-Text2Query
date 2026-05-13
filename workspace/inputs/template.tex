@@ -1,0 +1,170 @@
+% SoftwareX Original Article LaTeX Template
+% Adapted for Text2Query submission
+\documentclass[preprint,12pt, a4paper]{elsarticle}
+
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric,arrows.meta,positioning,fit,backgrounds}
+
+\setlength{\parindent}{0pt}
+
+\journal{SoftwareX}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{A natural language query system for IoT sensor data (Text2Query: A four-stage pipeline for sensor data querying)}
+
+\author[A]{Vandha Pradwiyasma Widartha\corref{cor}}
+\author[A]{Ifrina Nuritha\fnref{B}}
+\author[C]{Kyung Hyune Rhee}
+\author[D]{Young Po Hwang}
+\author[A]{Chang Soo Kim}
+
+\address[A]{Department of Information Systems, Pukyong National University, Busan 48513, Republic of Korea}
+\address[B]{Department of Information System, University of Jember, Indonesia 68121, Republic of Indonesia}
+\address[C]{Division of Computer Engineering and AI, Pukyong National University, Busan 48513, Republic of Korea}
+\address[D]{Research Center, Hanyoung DS, Inc., Seoul 07600, Republic of Korea}
+
+\cortext[cor]{Corresponding author}
+\fntext[B]{Current affiliation}
+
+\begin{abstract}
+Text2Query is a four-stage open-source pipeline that translates natural language questions about IoT sensor data into structured MongoDB queries, generates natural language answers, and optionally produces visualizations. The pipeline comprises: (S1) a decomposer that uses large language model (LLM) inference with regex fallback to parse questions into a structured QueryPlan; (S2) a query executor that translates the plan into MongoDB aggregation pipelines with time-aware filtering; (S3) an answer generator that produces natural language responses; and (S4) a visualization module that auto-generates context-appropriate charts. Evaluated on 205 benchmark questions spanning 10 operation types across three sensor collections, Text2Query achieves 100\% operation detection accuracy, 96.1\% collection identification, and 87.6\% field extraction (Jaccard similarity). The system handles statistical aggregation, anomaly detection, trend analysis, and cross-collection comparison—operations absent from existing text-to-SQL tools. Source code is available at https://github.com/vandhapw/Text2Query.
+\end{abstract}
+
+\begin{keyword}
+Natural language querying \sep IoT sensor data \sep MongoDB \sep Text-to-query \sep Time-series anomaly detection \sep Large language model
+\end{keyword}
+
+\end{frontmatter}
+
+%% MANDATORY: Code Metadata table
+\begin{table}[H]
+\centering
+\caption{Code Metadata}
+\label{tab:code-metadata}
+\begin{tabular}{|l|p{10cm}|}
+\hline
+\textbf{\#} & \textbf{Metadata} \\
+\hline
+C1 & Current code version: v1.0.0 \\
+\hline
+C2 & Permanent GitHub link: https://github.com/vandhapw/Text2Query \\
+\hline
+C3 & Legal Code License: MIT License \\
+\hline
+C4 & Code versioning system: Git \\
+\hline
+C5 & Software code languages, tools, services: Python 3.11+, MongoDB, Ollama LLM runtime, Plotly, Pandas, NumPy \\
+\hline
+C6 & Compilation requirements, operating environments \& dependencies: Python $\geq$ 3.11, MongoDB $\geq$ 6.0, Ollama (optional for cloud LLM), see requirements.txt \\
+\hline
+C7 & Link to developer documentation/manual: https://github.com/vandhapw/Text2Query\#readme \\
+\hline
+C8 & Support email: vandhapw@pukyong.ac.kr \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Motivation and significance}
+% PLACEHOLDER
+
+\section{Software description}
+
+\subsection{Software architecture}
+% PLACEHOLDER
+
+\subsection{Software functionalities}
+% PLACEHOLDER
+
+\subsection{Sample code snippets}
+% PLACEHOLDER
+
+\section{Illustrative examples}
+% PLACEHOLDER
+
+\section{Impact}
+% PLACEHOLDER
+
+\section{Conclusions}
+% PLACEHOLDER
+
+\section*{Declaration of generative AI and AI-assisted technologies}
+During the preparation of this work the authors used Claude (Anthropic) for code development assistance and manuscript drafting. After using this tool, the authors reviewed and edited the content as needed and take full responsibility for the content of the publication.
+
+\section*{CRediT authorship contribution statement}
+\textbf{Vandha Pradwiyasma Widartha:} Conceptualization, Software, Methodology, Writing -- original draft, Investigation. \textbf{Ifrina Nuritha:} Formal analysis, Validation, Writing -- review and editing. \textbf{Kyung Hyune Rhee:} Supervision, Writing -- review and editing. \textbf{Young Po Hwang:} Resources, Data curation. \textbf{Chang Soo Kim:} Supervision, Project administration, Funding acquisition.
+
+\section*{Acknowledgements}
+This work was supported by [FUNDING INFORMATION TO BE ADDED].
+
+\bibliographystyle{elsarticle-num}
+
+\begin{thebibliography}{30}
+
+\bibitem{vaswani2017attention}
+V.~Vaswani, N.~Shazeer, N.~Parmar, J.~Uszkoreit, L.~Jones, A.~N.~Gomez, L.~Kaiser, I.~Polosukhin,
+Attention is all you need,
+in: Advances in Neural Information Processing Systems, 2017, pp.~5998--6008.
+
+\bibitem{yu2018spider}
+T.~Yu, R.~Zhang, K.~Yang, M.~Yasunaga, D.~Wang, Z.~Li, J.~Ma, I.~Li, Q.~Yao, S.~Roman, Z.~Zhang, R.~Radev,
+Spider: A large-scale human-labeled dataset for complex and cross-database semantic parsing and text-to-SQL task,
+in: Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing, 2018.
+
+\bibitem{paszke2019pytorch}
+A.~Paszke, S.~Gross, F.~Massa, A.~Lerer, J.~Bradbury, G.~Chanan, T.~Killeen, Z.~Lin, N.~Gimelshein, L.~Antiga, A.~Desmaison, A.~Kopf, E.~Yang, Z.~DeVito, M.~Raison, A.~Tejani, S.~Chilamkurthy, B.~Steiner, L.~Fang, J.~Bai, S.~Chintala,
+PyTorch: An imperative style, high-performance deep learning library,
+in: Advances in Neural Information Processing Systems 32, 2019, pp.~8024--8035.
+
+\bibitem{hunter2007matplotlib}
+J.~D.~Hunter,
+Matplotlib: A 2D graphics environment,
+Computing in Science \& Engineering 9~(3) (2007) 90--95.
+
+\bibitem{pedregosa2011scikit}
+F.~Pedregosa, G.~Varoquaux, A.~Gramfort, V.~Michel, B.~Thirion, O.~Grisel, M.~Blondel, P.~Prettenhofer, R.~Weiss, V.~Dubourg, J.~Vanderplas, A.~Passos, D.~Cournapeau, M.~Brucher, M.~Perrot, E.~Duchesnay,
+Scikit-learn: Machine learning in Python,
+Journal of Machine Learning Research 12 (2011) 2825--2830.
+
+\bibitem{ester1996dbscan}
+M.~Ester, H.-P.~Kriegel, J.~Sander, X.~Xu,
+A density-based algorithm for discovering clusters in large spatial databases with noise,
+in: Proceedings of the 2nd International Conference on Knowledge Discovery and Data Mining, 1996, pp.~226--231.
+
+\bibitem{chung2014empirical}
+J.~Chung, C.~Gulcehre, K.~Cho, Y.~Bengio,
+Empirical evaluation of gated recurrent neural networks on sequence modeling,
+arXiv preprint arXiv:1412.3555 (2014).
+
+\bibitem{bai2018tcn}
+S.~Bai, J.~Z.~Kolter, V.~Koltun,
+An empirical evaluation of generic convolutional and recurrent networks for sequence modeling,
+arXiv preprint arXiv:1803.01271 (2018).
+
+\bibitem{goh2017dataset}
+J.~Goh, S.~Adepu, K.~N.~Junejo, A.~Mathur,
+A dataset to support research in the design of secure water treatment facilities,
+in: International Conference on Critical Information Infrastructures Security, Springer, 2017, pp.~88--99.
+
+\bibitem{kingma2014vae}
+D.~P.~Kingma, M.~Welling,
+Auto-encoding variational bayes,
+in: Proceedings of the International Conference on Learning Representations, 2014.
+
+\bibitem{gal2016dropout}
+Y.~Gal, Z.~Ghahramani,
+Dropout as a Bayesian approximation: Representing model uncertainty in deep learning,
+in: Proceedings of the 33rd International Conference on Machine Learning, 2016, pp.~1050--1059.
+
+\end{thebibliography}
+
+\end{document}

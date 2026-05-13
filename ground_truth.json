@@ -1,0 +1,311 @@
+{
+  "metadata": {
+    "created": "2026-04-22",
+    "annotator": "Research Team",
+    "version": "1.0",
+    "description": "Ground truth annotations for Text2Query benchmark questions",
+    "annotation_guidelines": {
+      "operation": "Correct operation type that should be detected",
+      "collections": "Expected collection(s) to query",
+      "fields": "Expected field(s) to retrieve",
+      "time_scope": "Expected time scope (global, today, this_week, etc.)",
+      "difficulty": "easy=simple lookup, medium=time range, hard=compound/multi-collection",
+      "expected_result_type": "single_value, time_series, aggregation, comparison"
+    }
+  },
+  "questions": [
+    {
+      "id": "S01",
+      "group": "DetectLatest",
+      "question": "Show the latest temperature from klaen sensor",
+      "ground_truth": {
+        "operation": "DetectLatest",
+        "collections": ["plalion_klaen_sensor"],
+        "fields": ["temperature"],
+        "time_scope": "global",
+        "difficulty": "easy",
+        "expected_result_type": "single_value",
+        "mongo_query_template": {"$orderBy": {"timestamp": -1}, "$limit": 1}
+      }
+    },
+    {
+      "id": "S02",
+      "group": "DetectLatest",
+      "question": "What is the current CO2 level from company sensor",
+      "ground_truth": {
+        "operation": "DetectLatest",
+        "collections": ["plalion_company_sensor"],
+        "fields": ["co2"],
+        "time_scope": "global",
+        "difficulty": "easy",
+        "expected_result_type": "single_value"
+      }
+    },
+    {
+      "id": "S03",
+      "group": "DetectOldest",
+      "question": "Show the oldest humidity reading from klaen",
+      "ground_truth": {
+        "operation": "DetectOldest",
+        "collections": ["plalion_klaen_sensor"],
+        "fields": ["humidity"],
+        "time_scope": "global",
+        "difficulty": "easy",
+        "expected_result_type": "single_value",
+        "mongo_query_template": {"$orderBy": {"timestamp": 1}, "$limit": 1}
+      }
+    },
+    {
+      "id": "S04",
+      "group": "DetectRange",
+      "question": "Get temperature readings from last hour klaen",
+      "ground_truth": {
+        "operation": "DetectRange",
+        "collections": ["plalion_klaen_sensor"],
+        "fields": ["temperature"],
+        "time_scope": "last_hour",
+        "difficulty": "medium",
+        "expected_result_type": "time_series"
+      }
+    },
+    {
+      "id": "S05",
+      "group": "DetectTrend",
+      "question": "Show temperature trend for klaen sensor today",
+      "ground_truth": {
+        "operation": "DetectTrend",
+        "collections": ["plalion_klaen_sensor"],
+        "fields": ["temperature"],
+        "time_scope": "today",
+        "difficulty": "medium",
+        "expected_result_type": "time_series",
+        "requires_visualization": true
+      }
+    },
+    {
+      "id": "S06",
+      "group": "DetectAverage",
+      "question": "What is the average temperature today klaen",
+      "ground_truth": {
+        "operation": "DetectAverage",
+        "collections": ["plalion_klaen_sensor"],
+        "fields": ["temperature"],
+        "time_scope": "today",
+        "difficulty": "medium",
+        "expected_result_type": "aggregation"
+      }
+    },
+    {
+      "id": "S07",
+      "group": "DetectMaximum",
+      "question": "What was the maximum temperature yesterday klaen",
+      "ground_truth": {
+        "operation": "DetectMaximum",
+        "collections": ["plalion_klaen_sensor"],
+        "fields": ["temperature"],
+        "time_scope": "yesterday",
+        "difficulty": "medium",
+        "expected_result_type": "single_value"
+      }
+    },
+    {
+      "id": "S08",
+      "group": "DetectMinimum",
+      "question": "Show the minimum humidity this week company",
+      "ground_truth": {
+        "operation": "DetectMinimum",
+        "collections": ["plalion_company_sensor"],
+        "fields": ["humidity"],
+        "time_scope": "this_week",
+        "difficulty": "medium",
+        "expected_result_type": "single_value"
+      }
+    },
+    {
+      "id": "S09",
+      "group": "DetectCount",
+      "question": "How many temperature readings today klaen",
+      "ground_truth": {
+        "operation": "DetectCount",
+        "collections": ["plalion_klaen_sensor"],
+        "fields": ["temperature"],
+        "time_scope": "today",
+        "difficulty": "medium",
+        "expected_result_type": "aggregation"
+      }
+    },
+    {
+      "id": "S10",
+      "group": "DetectCompare",
+      "question": "Compare indoor and outdoor temperature",
+      "ground_truth": {
+        "operation": "DetectCompare",
+        "collections": ["plalion_klaen_sensor", "lighting_weatherapi"],
+        "fields": ["temperature"],
+        "time_scope": "global",
+        "difficulty": "hard",
+        "expected_result_type": "comparison",
+        "requires_visualization": true,
+        "multi_collection": true
+      }
+    },
+    {
+      "id": "S11",
+      "group": "DetectLatest",
+      "question": "Show latest dust level from klaen",
+      "ground_truth": {
+        "operation": "DetectLatest",
+        "collections": ["plalion_klaen_sensor"],
+        "fields": ["dust"],
+        "time_scope": "global",
+        "difficulty": "easy",
+        "expected_result_type": "single_value"
+      }
+    },
+    {
+      "id": "S12",
+      "group": "DetectLatest",
+      "question": "What is current VOC reading klaen",
+      "ground_truth": {
+        "operation": "DetectLatest",
+        "collections": ["plalion_klaen_sensor"],
+        "fields": ["voc"],
+        "time_scope": "global",
+        "difficulty": "easy",
+        "expected_result_type": "single_value"
+      }
+    },
+    {
+      "id": "S13",
+      "group": "DetectTrend",
+      "question": "Show CO2 trend for company sensor this week",
+      "ground_truth": {
+        "operation": "DetectTrend",
+        "collections": ["plalion_company_sensor"],
+        "fields": ["co2"],
+        "time_scope": "this_week",
+        "difficulty": "medium",
+        "expected_result_type": "time_series",
+        "requires_visualization": true
+      }
+    },
+    {
+      "id": "S14",
+      "group": "DetectAverage",
+      "question": "Average humidity for company sensor today",
+      "ground_truth": {
+        "operation": "DetectAverage",
+        "collections": ["plalion_company_sensor"],
+        "fields": ["humidity"],
+        "time_scope": "today",
+        "difficulty": "medium",
+        "expected_result_type": "aggregation"
+      }
+    },
+    {
+      "id": "S15",
+      "group": "DetectRange",
+      "question": "Get all readings from 9 AM to 5 PM today klaen",
+      "ground_truth": {
+        "operation": "DetectRange",
+        "collections": ["plalion_klaen_sensor"],
+        "fields": ["temperature", "humidity", "co2", "dust", "voc"],
+        "time_scope": "custom_range",
+        "difficulty": "hard",
+        "expected_result_type": "time_series"
+      }
+    },
+    {
+      "id": "S16",
+      "group": "DetectMaximum",
+      "question": "Highest CO2 level this month company",
+      "ground_truth": {
+        "operation": "DetectMaximum",
+        "collections": ["plalion_company_sensor"],
+        "fields": ["co2"],
+        "time_scope": "this_month",
+        "difficulty": "medium",
+        "expected_result_type": "single_value"
+      }
+    },
+    {
+      "id": "S17",
+      "group": "DetectMinimum",
+      "question": "Lowest temperature this week klaen",
+      "ground_truth": {
+        "operation": "DetectMinimum",
+        "collections": ["plalion_klaen_sensor"],
+        "fields": ["temperature"],
+        "time_scope": "this_week",
+        "difficulty": "medium",
+        "expected_result_type": "single_value"
+      }
+    },
+    {
+      "id": "S18",
+      "group": "DetectCount",
+      "question": "Count humidity readings this month company",
+      "ground_truth": {
+        "operation": "DetectCount",
+        "collections": ["plalion_company_sensor"],
+        "fields": ["humidity"],
+        "time_scope": "this_month",
+        "difficulty": "medium",
+        "expected_result_type": "aggregation"
+      }
+    },
+    {
+      "id": "S19",
+      "group": "DetectCompare",
+      "question": "Compare temperature between klaen and company",
+      "ground_truth": {
+        "operation": "DetectCompare",
+        "collections": ["plalion_klaen_sensor", "plalion_company_sensor"],
+        "fields": ["temperature"],
+        "time_scope": "global",
+        "difficulty": "hard",
+        "expected_result_type": "comparison",
+        "requires_visualization": true,
+        "multi_collection": true
+      }
+    },
+    {
+      "id": "S20",
+      "group": "EdgeCase",
+      "question": "Show sensor data for non-existent field",
+      "ground_truth": {
+        "operation": "DetectLatest",
+        "collections": [],
+        "fields": [],
+        "time_scope": "global",
+        "difficulty": "hard",
+        "expected_result_type": "error",
+        "should_fail": true,
+        "error_type": "field_not_found"
+      }
+    }
+  ],
+  "statistics": {
+    "total_questions": 20,
+    "by_difficulty": {
+      "easy": 6,
+      "medium": 11,
+      "hard": 3
+    },
+    "by_operation": {
+      "DetectLatest": 6,
+      "DetectOldest": 1,
+      "DetectRange": 2,
+      "DetectTrend": 2,
+      "DetectAverage": 2,
+      "DetectMaximum": 2,
+      "DetectMinimum": 2,
+      "DetectCount": 2,
+      "DetectCompare": 2,
+      "EdgeCase": 1
+    },
+    "multi_collection_queries": 2,
+    "visualization_required": 4,
+    "edge_cases": 1
+  }
+}

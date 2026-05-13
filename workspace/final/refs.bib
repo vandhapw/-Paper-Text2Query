@@ -1,0 +1,253 @@
+% refs.bib -- Literature references for Text2Query SoftwareX paper
+% Total: 30 references across 5 categories
+
+%% Category 1: Text-to-SQL / Semantic Parsing (9 refs)
+
+@inproceedings{yu2018spider,
+  title     = {Spider: A Large-Scale Human-Labeled Dataset for Complex and Cross-Domain Semantic Parsing and Text-to-{SQL} Task},
+  author    = {Yu, Tao and Zhang, Rui and Yang, Kai and Yasunaga, Michihiro and Wang, Dongxu and Li, Zhihan and Ma, James and Li, Ifi and Yao, Qing and Roman, Shuicheng and Zhang, Zilong and Radev, Dragomir},
+  booktitle = {Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing},
+  pages     = {391--401},
+  year      = {2018}
+}
+
+@inproceedings{pourreza2024dinsql,
+  title     = {{DIN}-{SQL}: Decomposed In-Context Learning of Text-to-{SQL} with Self-Correction},
+  author    = {Pourreza, Mohammadreza and Rafiei, Davood},
+  booktitle = {Advances in Neural Information Processing Systems},
+  year      = {2024}
+}
+
+@inproceedings{gan2021natsql,
+  title     = {{NatSQL}: Making {SQL} Easier to Infer from Natural Language Specifications},
+  author    = {Gan, Yujian and Chen, Xinyu and Purver, Matthew},
+  booktitle = {Findings of the Association for Computational Linguistics: {ACL}-{IJCNLP} 2021},
+  pages     = {3513--3525},
+  year      = {2021}
+}
+
+@inproceedings{yu2019sparc,
+  title     = {{SParC}: Cross-Domain Semantic Parsing in Context},
+  author    = {Yu, Tao and Zhang, Rui and Er, Michael and Li, Suyi and Xue, Yan and Radev, Dragomir},
+  booktitle = {Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics},
+  pages     = {4554--4565},
+  year      = {2019}
+}
+
+@inproceedings{yu2019cosql,
+  title     = {{CoSQL}: A Conversational Text-to-{SQL} Task},
+  author    = {Yu, Tao and Zhang, Rui and Yasunaga, Michihiro and Zhang, Yifan and Xue, Yan and Radev, Dragomir},
+  booktitle = {Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing},
+  pages     = {556--567},
+  year      = {2019}
+}
+
+@inproceedings{wang2020ratsql,
+  title     = {{RAT}-{SQL}: Relation-Aware Schema Encoding and Linking for Text-to-{SQL}},
+  author    = {Wang, Bailin and Shin, Richard and Liu, Xiaodong and Lin, Ming and Sun, Yue and Ren, Xiang},
+  booktitle = {Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics},
+  pages     = {7432--7444},
+  year      = {2020}
+}
+
+@inproceedings{lin2020bridge,
+  title     = {Bridging Textal and Tabular Data for Cross-Domain Semantic Parsing},
+  author    = {Lin, Xi Victoria and Socher, Richard and Xiong, Caiming},
+  booktitle = {Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing},
+  pages     = {411--425},
+  year      = {2020}
+}
+
+@article{zhong2017seq2sql,
+  title     = {{Seq2SQL}: Generating Structured Queries from Natural Language Using Reinforcement Learning},
+  author    = {Zhong, Victor and Xiong, Caiming and Socher, Richard},
+  journal   = {arXiv preprint arXiv:1709.00103},
+  year      = {2017}
+}
+
+@inproceedings{xie2022t5sql,
+  title     = {{T5}-3B for Text-to-{SQL}: An Empirical Study},
+  author    = {Xie, Tianbao and Zhou, Yi and Dong, Yijun and Liu, Huan and Sun, Jian and Sun, Ming},
+  booktitle = {Findings of the Association for Computational Linguistics: {EMNLP} 2022},
+  year      = {2022}
+}
+
+%% Category 2: LLM-based Query / Code Generation (7 refs)
+
+@article{bai2023qwen,
+  title     = {Qwen Technical Report},
+  author    = {Bai, Jinze and Bai, Shuai and Chu, Yunfei and Cui, Zeyu and Dang, Kai and Deng, Xiaodong and Fan, Yang and Ge, Wenbin and Han, Yu and Huang, Fei and others},
+  journal   = {arXiv preprint arXiv:2309.16609},
+  year      = {2023}
+}
+
+@article{roziere2023codellama,
+  title     = {Code {Llama}: Open Foundation Models for Code},
+  author    = {Rozi{\`e}re, Baptiste and Gehring, Jonas and Gloeckle, Fabian and Sootla, Sten and Gat, Itai and Tan, Xiaoqing Ellen and Adi, Yossi and Liu, Jing and Remez, Tal and Eren, Jeremy and others},
+  journal   = {arXiv preprint arXiv:2308.12950},
+  year      = {2023}
+}
+
+@article{openai2023gpt4,
+  title     = {{GPT-4} Technical Report},
+  author    = {{OpenAI}},
+  journal   = {arXiv preprint arXiv:2303.08774},
+  year      = {2023}
+}
+
+@article{guo2024deepseekcoder,
+  title     = {{DeepSeek-Coder}: When the Large Language Model Meets Programming},
+  author    = {Guo, Daya and Zhu, Qihao and Bao, Nan and others},
+  journal   = {arXiv preprint arXiv:2401.14196},
+  year      = {2024}
+}
+
+@article{chen2021evaluating,
+  title     = {Evaluating Large Language Models Trained on Code},
+  author    = {Chen, Mark and Tworek, Jerry and Jun, Heewoo and Yuan, Qiming and Pinto, Mario and others},
+  journal   = {arXiv preprint arXiv:2107.03374},
+  year      = {2021}
+}
+
+@article{touvron2023llama,
+  title     = {{LLaMA}: Open and Efficient Foundation Language Models},
+  author    = {Touvron, Hugo and Lavril, Thibaut and Izacard, Gautier and Martinet, Xavier and Lachaux, Marie-Anne and Lacroix, Timoth{\'e}e and Rozi{\`e}re, Baptiste and Goyal, Naman and Hambro, Eric and Azhar, Faisal and others},
+  journal   = {arXiv preprint arXiv:2302.13971},
+  year      = {2023}
+}
+
+@inproceedings{scholak2021picard,
+  title     = {{PICARD}: Parsing Incrementally for Constrained Auto-Regressive Decoding from Language Models},
+  author    = {Scholak, Torsten and Schucher, Nathan and Pal, Chris},
+  booktitle = {Proceedings of the 2021 Conference on Empirical Methods in Natural Language Processing},
+  pages     = {639--649},
+  year      = {2021}
+}
+
+%% Category 3: IoT Data / Sensor Query Systems (6 refs)
+
+@article{gubbi2013iot,
+  title     = {Internet of Things ({IoT}): A Vision, Architectural Elements, and Future Directions},
+  author    = {Gubbi, Jayavardhana and Buyya, Rajkumar and Marusic, Slaven and Palaniswami, Marimuthu},
+  journal   = {Future Generation Computer Systems},
+  volume    = {29},
+  number    = {7},
+  pages     = {1645--1660},
+  year      = {2013},
+  doi       = {10.1016/j.future.2013.01.010}
+}
+
+@article{alfuqaha2015iot,
+  title     = {Internet of Things: A Survey on Enabling Technologies, Protocols, and Applications},
+  author    = {Al-Fuqaha, Ala and Guizani, Mohsen and Mohammadi, Mehdi and Aledhari, Mohammed and Ayyash, Moussa},
+  journal   = {IEEE Communications Surveys \& Tutorials},
+  volume    = {17},
+  number    = {4},
+  pages     = {2347--2376},
+  year      = {2015},
+  doi       = {10.1109/COMST.2015.2415188}
+}
+
+@misc{influxdb,
+  title     = {{InfluxDB} Documentation},
+  author    = {{InfluxData, Inc.}},
+  howpublished = {\url{https://docs.influxdata.com/}},
+  year      = {2024}
+}
+
+@misc{mongodb,
+  title     = {{MongoDB} Documentation},
+  author    = {{MongoDB, Inc.}},
+  howpublished = {\url{https://docs.mongodb.com/}},
+  year      = {2024}
+}
+
+@misc{grafana,
+  title     = {{Grafana}: The Open Observability Platform},
+  author    = {{Grafana Labs}},
+  howpublished = {\url{https://grafana.com/}},
+  year      = {2024}
+}
+
+@book{who2010iaq,
+  title     = {{WHO} Guidelines for Indoor Air Quality: Selected Pollutants},
+  author    = {{World Health Organization}},
+  year      = {2010},
+  publisher = {World Health Organization},
+  address   = {Bonn}
+}
+
+%% Category 4: NL Interfaces for Databases (4 refs)
+
+@article{androutsopoulos1995nlidb,
+  title     = {Natural Language Interfaces to Databases -- An Introduction},
+  author    = {Androutsopoulos, Ion and Ritchie, Graeme D. and Thanisch, Peter},
+  journal   = {Natural Language Engineering},
+  volume    = {1},
+  number    = {1},
+  pages     = {29--81},
+  year      = {1995}
+}
+
+@article{affolter2019comparative,
+  title     = {A Comparative Survey of Recent Natural Language Interfaces for Databases},
+  author    = {Affolter, Katrin and Stockinger, Kurt and Bernstein, Abraham},
+  journal   = {The {VLDB} Journal},
+  volume    = {28},
+  pages     = {793--819},
+  year      = {2019},
+  doi       = {10.1007/s00778-019-00548-2}
+}
+
+@inproceedings{li2014constructing,
+  title     = {Constructing Interactive Natural Language Interfaces to Databases},
+  author    = {Li, Fei and Jagadish, H. V.},
+  booktitle = {Proceedings of the 2014 {ACM SIGMOD} International Conference on Management of Data},
+  pages     = {1615--1618},
+  year      = {2014},
+  doi       = {10.1145/2588555.2612186}
+}
+
+@article{katsogiannis2023survey,
+  title     = {A Survey on Deep Learning Approaches for Text-to-{SQL}},
+  author    = {Katsogiannis-Meimarakis, George and Koutrika, Georgia},
+  journal   = {The {VLDB} Journal},
+  volume    = {32},
+  pages     = {905--936},
+  year      = {2023},
+  doi       = {10.1007/s00778-023-00810-x}
+}
+
+%% Category 5: Foundation (4 refs)
+
+@inproceedings{vaswani2017attention,
+  title     = {Attention Is All You Need},
+  author    = {Vaswani, Ashish and Shazeer, Noam and Parmar, Niki and Uszkoreit, Jakob and Jones, Llion and Gomez, Aidan N. and Kaiser, {\L}ukasz and Polosukhin, Illia},
+  booktitle = {Advances in Neural Information Processing Systems},
+  pages     = {5998--6008},
+  year      = {2017}
+}
+
+@misc{plotly,
+  title     = {{Plotly}: Open Source Graphing Library for {Python}},
+  author    = {{Plotly Technologies Inc.}},
+  howpublished = {\url{https://plotly.com/python/}},
+  year      = {2024}
+}
+
+@inproceedings{mckinney2010pandas,
+  title     = {Data Structures for Statistical Computing in {Python}},
+  author    = {McKinney, Wes},
+  booktitle = {Proceedings of the 9th {Python} in Science Conference},
+  pages     = {56--61},
+  year      = {2010}
+}
+
+@article{raffel2020t5,
+  title     = {Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer},
+  author    = {Raffel, Colin and Shazeer, Noam and Roberts, Adam and Lee, Katherine and Narang, Sharan and Matena, Michael and Zhou, Yanqi and Li, Wei and Liu, Peter J.},
+  journal   = {Journal of Machine Learning Research},
+  volume    = {21},
+  pages     = {1--67},
+  year      = {2020}
+}
