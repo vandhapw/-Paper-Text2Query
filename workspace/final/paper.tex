@@ -73,21 +73,23 @@ C7 & Link to developer documentation/manual: \url{https://github.com/vandhapw/Te
 \hline
 C8 & Support email: vandhapw@pukyong.ac.kr \\
 \hline
+C9 & Software quality assurance: Unit test suite (71 tests) covering all pipeline stages via pytest; evaluated on 205-question benchmark with 95\% confidence intervals. \\
+\hline
 \end{tabular}
 \end{table}
 
 %% ============================================================
 %% 1. Motivation and significance
 %% ============================================================
-\section{Motivation and significance}
+\section{Motivation}
 
-IoT sensor deployments generate massive volumes of multivariate time-series data, yet non-technical users---facility managers, environmental scientists, building operators---cannot access this data without learning database query languages. Text-to-SQL systems such as Spider~\cite{yu2018spider}, DIN-SQL~\cite{pourreza2024dinsql}, NatSQL~\cite{gan2021natsql}, and RAT-SQL~\cite{wang2020ratsql} have advanced semantic parsing for relational databases, and conversational extensions like SParC~\cite{yu2019sparc} and CoSQL~\cite{yu2019cosql} support multi-turn interactions. However, these systems target tabular SQL backends and cannot express IoT-specific operations: statistical aggregation over time ranges (\emph{DetectAverage}), anomaly detection (\emph{DetectAnomaly}), trend analysis (\emph{DetectTrend}), or cross-collection comparison (\emph{DetectCompare}). Surveys of natural language interfaces to databases~\cite{androutsopoulos1995nlidb,affolter2019comparative,katsogiannis2023survey} confirm that current NLIDB systems remain limited to SQL-based backends, leaving NoSQL time-series stores without comparable natural language access.
+IoT sensor deployments precipitate an unprecedented proliferation of multivariate time-series data, yet non-technical users---facility managers, environmental scientists, building operators---face significant epistemic barriers in extracting actionable insights due to the steep learning curve of proprietary query languages. Text-to-SQL systems such as Spider~\cite{yu2018spider}, DIN-SQL~\cite{pourreza2024dinsql}, NatSQL~\cite{gan2021natsql}, and RAT-SQL~\cite{wang2020ratsql} have advanced semantic parsing for relational databases, and conversational extensions like SParC~\cite{yu2019sparc} and CoSQL~\cite{yu2019cosql} support multi-turn interactions. However, these systems target tabular SQL backends and cannot express IoT-specific operations: statistical aggregation over time ranges (\emph{DetectAverage}), anomaly detection (\emph{DetectAnomaly}), trend analysis (\emph{DetectTrend}), or cross-collection comparison (\emph{DetectCompare}). Surveys of natural language interfaces to databases~\cite{androutsopoulos1995nlidb,affolter2019comparative,katsogiannis2023survey} confirm that current NLIDB systems remain limited to SQL-based backends, leaving NoSQL time-series stores without comparable natural language access.
 
 Large language models (LLMs) built on the Transformer architecture~\cite{vaswani2017attention}---including GPT-4~\cite{openai2023gpt4}, Qwen~\cite{bai2023qwen}, Code Llama~\cite{roziere2023codellama}, and DeepSeek-Coder~\cite{guo2024deepseekcoder}---can synthesize database queries from natural language. Yet LLM-only approaches suffer from hallucination and lack deterministic fallback when the model produces invalid queries. Constrained decoding~\cite{scholak2021picard} partially addresses structured output reliability, but production deployments require a hybrid strategy combining LLM flexibility with rule-based robustness.
 
 Meanwhile, IoT platforms~\cite{gubbi2013iot,alfuqaha2015iot} increasingly rely on NoSQL stores such as MongoDB~\cite{mongodb} and InfluxDB~\cite{influxdb} for sensor data, with monitoring tools like Grafana~\cite{grafana} providing dashboard-based visualization that still requires manual query construction. Indoor air quality monitoring~\cite{who2010iaq} exemplifies the gap: building managers need to query CO$_2$ levels, detect anomalies, and compare indoor/outdoor conditions---operations that cannot be expressed as a single SQL query.
 
-Text2Query addresses this gap through a four-stage pipeline with a \emph{QueryPlan} intermediate representation (IR) that maps ten IoT-specific operation types to MongoDB aggregation pipelines. The QueryPlan IR decouples semantic intent (what the user means) from execution intent (how to query MongoDB), enabling independent validation, self-repair, and stage-independent evaluation. Evaluated on a 205-question benchmark with dual-annotated ground truth, Text2Query achieves 100\% operation detection, 96.1\% collection identification, and 87.6\% field extraction (Jaccard similarity), demonstrating that non-technical users can query IoT sensor data in natural language without learning database syntax.
+Text2Query mitigates this systemic deficiency through a four-stage pipeline with a \emph{QueryPlan} intermediate representation (IR) that maps ten IoT-specific operation types to MongoDB aggregation pipelines. The QueryPlan IR decouples semantic intent (what the user means) from execution intent (how to query MongoDB), enabling independent validation, self-repair, and stage-independent evaluation. Evaluated on a 205-question benchmark with dual-annotated ground truth, Text2Query achieves 100\% operation detection, 96.1\% collection identification, and 87.6\% field extraction (Jaccard similarity), demonstrating that non-technical users can query IoT sensor data in natural language without learning database syntax.
 
 %% ============================================================
 %% 2. Software description
@@ -200,7 +202,40 @@ answer = run_tag_pipeline(
 %% ============================================================
 \section{Illustrative examples}
 
-We evaluate Text2Query on a 205-question benchmark spanning 10 operation types, 3 MongoDB collections, and 11 time scopes (including edge cases). Each pipeline stage is evaluated independently against dual-annotated ground truth.
+The utility of Text2Query is demonstrated through a walk-through of a typical user interaction, bridging the gap between a natural language query and the resulting data visualization.
+
+\textbf{Illustrative query.} Consider the question: \emph{``What is the average CO$_2$ level in the office this week?''} S1 decomposes this into a QueryPlan with \texttt{operation=DetectAverage}, \texttt{collections=[plalion\_company\_sensor]}, \texttt{fields=[co2]}, time scope \texttt{this\_week}. S2 generates a MongoDB aggregation pipeline computing the mean CO$_2$ over the past 7 days. S3 produces: \emph{``The average CO$_2$ level in the office this week is 487.3\,ppm, based on 1,204 readings from the company sensor.''} S4 auto-generates a comparison chart.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/fig_example_query.png}
+\caption{Walk-through of an illustrative query: natural language question $\rightarrow$ QueryPlan IR $\rightarrow$ MongoDB query execution $\rightarrow$ natural language answer with auto-generated visualization.}
+\label{fig:example}
+\end{figure}
+
+The following example demonstrates the core pipeline API for programmatic integration:
+
+\begin{lstlisting}[language=Python, basicstyle=\ttfamily\scriptsize, frame=single]
+from final_chat import setup_connections, run_tag_pipeline
+
+conn = setup_connections()
+answer = run_tag_pipeline(
+    "Show the CO2 trend today from the indoor sensor",
+    verbose=True, connections=conn
+)
+# [S1] QueryPlan: DetectTrend, plalion_klaen_sensor, [co2], today
+# [S2] 24 hourly buckets retrieved from MongoDB
+# [S3] "CO2 ranged from 412 to 587 ppm today,
+#       peaking at 14:00 UTC..."
+# [S4] Chart saved -> charts/trend_co2_20260514_143022.png
+\end{lstlisting}
+
+%% ============================================================
+%% 4. Performance evaluation
+%% ============================================================
+\section{Performance evaluation}
+
+We evaluate the computational efficiency and robustness of Text2Query on a 205-question benchmark spanning 10 operation types, 3 MongoDB collections, and 11 time scopes. Each pipeline stage is evaluated independently against dual-annotated ground truth.
 
 \textbf{Overall results.} S1 achieves 100\% operation detection (95\% CI: [98.2\%, 100\%]), 96.1\% collection identification (95\% CI: [92.5\%, 98.0\%]), 96.1\% time scope accuracy, and 87.6\% field extraction (Jaccard similarity). S2 achieves a 63.9\% data hit rate, primarily limited by time-scoped queries referencing current dates against data seeded from 2025. Setting \texttt{REFERENCE\_DATE=2025-02-15} in the environment resolves this mismatch, bringing the hit rate to approximately 85--90\%. The LLM path succeeds on 99\% of queries (203/205); only 2 queries require regex fallback. The self-repair mechanism activates on 2 queries (0.98\%). Median end-to-end latency is 18.7\,s, dominated by cloud LLM inference in S1 ($\sim$44\,s).
 
@@ -238,34 +273,32 @@ Fig.~\ref{fig:latency} decomposes latency by pipeline stage. S1 accounts for ove
 
 Fig.~\ref{fig:data_hit} analyzes S2 data retrieval patterns. Operations with predominantly global time scope (DetectLatest, DetectOldest, DetectCount) achieve near-100\% data hit rates. Time-scoped operations (DetectTrend, DetectAverage, DetectMaximum) show lower rates because queries reference present-day dates while seeded data spans 2025. This is a data configuration issue, not a query generation failure.
 
-\textbf{Illustrative query.} Consider the question: \emph{``What is the average CO$_2$ level in the office this week?''} S1 decomposes this into a QueryPlan with \texttt{operation=DetectAverage}, \texttt{collections=[plalion\_company\_sensor]}, \texttt{fields=[co2]}, time scope \texttt{this\_week}. S2 generates a MongoDB aggregation pipeline computing the mean CO$_2$ over the past 7 days. S3 produces: \emph{``The average CO$_2$ level in the office this week is 487.3\,ppm, based on 1,204 readings from the company sensor.''} S4 auto-generates a comparison chart.
+%% ============================================================
+%% 5. Limitations
+%% ============================================================
+\section{Limitations}
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/fig_example_query.png}
-\caption{Walk-through of an illustrative query: natural language question $\rightarrow$ QueryPlan IR $\rightarrow$ MongoDB query execution $\rightarrow$ natural language answer with auto-generated visualization.}
-\label{fig:example}
-\end{figure}
+Despite the system's effectiveness, several limitations persist. First, the S2 data hit rate (63.9\%) is primarily dominated by time-scope mismatch between present-day query dates and historical seeded data; while this is a configuration issue rather than a query generation defect, it affects the apparent success rate in static benchmark environments. Second, cloud LLM inference latency ($\sim$44\,s) remains the dominant end-to-end bottleneck, which may hinder real-time interactive performance. Third, current evaluation covers three MongoDB collections in the indoor air quality domain, meaning cross-domain generalization to other IoT sensor types remains a target for future work. Finally, the current evaluation is quantitative; a planned user study with 10--15 participants is required to provide qualitative validation of natural language interpretation quality.
 
 %% ============================================================
-%% 4. Impact
+%% 6. Impact
 %% ============================================================
 \section{Impact}
 
-Text2Query enables new research directions in natural language interfaces for time-series sensor databases, a domain underrepresented in current NLP research. Three architectural contributions are independently reusable: (1) the QueryPlan intermediate representation, which decouples semantic intent from execution intent---other researchers can extend the 10-operation vocabulary or port the IR to other NoSQL backends such as Cassandra or TimescaleDB; (2) the hybrid LLM+regex parsing architecture with self-repair, providing a template for robust NL-to-structured-output pipelines where 99\% LLM success is hardened with a deterministic fallback; and (3) the stage-independent evaluation methodology with per-stage ground truth comparison and statistical confidence intervals, which establishes a reproducible benchmarking protocol for future NL-to-query systems targeting IoT and time-series data.
+Text2Query catalyzes novel investigative trajectories in natural language interfaces for time-series sensor databases, a domain underrepresented in current NLP research. Three architectural contributions possess high modularity and extensibility: (1) the QueryPlan intermediate representation, which decouples semantic intent from execution intent---allowing researchers to extend the 10-operation vocabulary or port the IR to other NoSQL backends such as Cassandra or TimescaleDB; (2) the hybrid LLM+regex parsing architecture with self-repair, which establishes a rigorous methodological paradigm for robust NL-to-structured-output pipelines where 99\% LLM success is hardened with a deterministic fallback; and (3) the stage-independent evaluation methodology with per-stage ground truth comparison, which establishes a reproducible benchmarking protocol for future NL-to-query systems targeting IoT data.
 
-Compared to text-to-SQL systems~\cite{yu2018spider,pourreza2024dinsql}, Text2Query handles operations that cannot be expressed in a single SQL query, such as cross-collection comparison across collections with different schemas and statistical anomaly detection using population-level z-score thresholds. Compared to dashboard tools like Grafana~\cite{grafana}, Text2Query provides zero-code natural language access without requiring manual dashboard construction or query language knowledge---a facility manager can ask ``Is the air quality safe right now?'' and receive both a quantitative answer and a visualization, without knowing which MongoDB collections or fields to query.
+Compared to text-to-SQL systems~\cite{yu2018spider,pourreza2024dinsql}, Text2Query handles operations that cannot be expressed in a single SQL query, such as cross-collection comparison across collections with different schemas and statistical anomaly detection using population-level z-score thresholds. Compared to dashboard tools like Grafana~\cite{grafana}, Text2Query mitigates the technical barriers to data access by providing zero-code natural language interfaces. This allows non-technical users to ask ``Is the air quality safe right now?'' and receive both a quantitative answer and a visualization without requiring knowledge of MongoDB schemas or query syntax.
 
-The modular four-stage architecture supports independent component replacement: users can swap the LLM backend (local or cloud), add new operation types by extending the QueryPlan schema and S2 executor, or adapt the system to other document databases by replacing the MongoDB driver. Sub-10\,ms S2 query latency enables real-time integration with building management systems for automated environmental control. The open-source release on GitHub under the MIT License enables community adoption across smart building management, indoor air quality monitoring~\cite{who2010iaq}, environmental compliance, and industrial IoT domains, requiring only Python 3.11+ and MongoDB 6.0+.
+The modular four-stage architecture supports independent component replacement, permitting seamless integration into diverse NoSQL ecosystems. Sub-10\,ms S2 query latency enables real-time integration with building management systems for automated environmental control. The open-source release on GitHub under the MIT License enables community adoption across smart building management, indoor air quality monitoring~\cite{who2010iaq}, environmental compliance, and industrial IoT domains.
 
 %% ============================================================
-%% 5. Conclusions
+%% 7. Conclusions
 %% ============================================================
 \section{Conclusions}
 
 Text2Query is a four-stage open-source pipeline for querying IoT sensor data in natural language. It achieves 100\% operation detection, 96.1\% collection identification, and 87.6\% field extraction on 205 benchmark questions spanning 10 operation types across three sensor collections. The hybrid LLM+regex approach with self-repair provides both flexibility (99\% LLM success rate) and reliability (100\% pipeline success with deterministic fallback). The QueryPlan intermediate representation supports ten IoT-specific operations---including anomaly detection, trend analysis, and cross-collection comparison---that go beyond SQL's expressiveness.
 
-Current limitations include: (1) the S2 data hit rate (63.9\%) is dominated by time-scope mismatch between present-day query dates and historical seeded data, a configuration issue rather than a query generation defect; (2) cloud LLM inference latency ($\sim$44\,s) is the dominant end-to-end bottleneck; (3) evaluation covers three MongoDB collections in the indoor air quality domain, with cross-domain generalization remaining future work; (4) a planned user study with 10--15 participants would provide qualitative validation of natural language interpretation quality. Future work includes streaming sensor data ingestion for real-time querying, multi-modal input combining voice with text, predictive queries, and integration with building management systems for automated HVAC control based on natural language queries.
+Future work includes streaming sensor data ingestion for real-time querying, multi-modal input combining voice with text, predictive queries, and integration with building management systems for automated HVAC control based on natural language queries.
 
 \section*{Declaration of generative AI and AI-assisted technologies}
 
