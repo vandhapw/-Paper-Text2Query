@@ -92,7 +92,23 @@ To address these challenges, recent advancements have leveraged large language m
 Text2Query mitigates this systemic deficiency by introducing a four-stage pipeline anchored by a \emph{QueryPlan} intermediate representation (IR). This proposed solution decouples semantic intent (what the user means) from execution intent (how to query MongoDB), enabling a robust hybrid processing strategy: a high-capacity LLM for complex parsing, a self-repair module for structural correction, and a deterministic regex-based fallback for guaranteed availability. Evaluated on a 205-question benchmark, Text2Query achieves 100\% operation detection and 96.1\% collection identification, demonstrating that a structured IR-based approach can successfully bridge the gap between natural language and NoSQL time-series querying.
 
 %% ============================================================
-%% 2. Software description
+%% 2. Related Work
+%% ============================================================
+\section{Related Work}
+
+The development of Text2Query is situated at the intersection of semantic parsing, large language model (LLM) synthesis, and IoT data management.
+
+\subsection{Text-to-SQL and Semantic Parsing Systems}
+Semantic parsing has evolved from simple keyword-based mapping to sophisticated text-to-SQL frameworks. The Spider benchmark~\cite{yu2018spider} established a standard for evaluating cross-domain generalization, leading to architectures like RAT-SQL~\cite{wang2020ratsql} and NatSQL~\cite{gan2021natsql}. NatSQL specifically introduced a simplified intermediate representation to reduce the gap between natural language and formal SQL. More recently, DIN-SQL~\cite{pourreza2024dinsql} demonstrated the power of decomposed in-context learning and self-correction to improve accuracy on complex queries. However, these systems are fundamentally designed for tabular relational databases. They cannot inherently express IoT-specific requirements, such as population-level anomaly detection or time-bucketed aggregation, without cumbersome and non-intuitive SQL extensions. Text2Query addresses this by defining a specialized QueryPlan IR with 10 operations natively mapped to NoSQL aggregation pipelines.
+
+\subsection{LLM-Based Query Generation and Reliability}
+The emergence of Transformer-based LLMs~\cite{vaswani2017attention}, including Qwen~\cite{bai2023qwen}, GPT-4~\cite{openai2023gpt4}, and DeepSeek-Coder~\cite{guo2024deepseekcoder}, has shifted the paradigm toward zero-shot and few-shot query synthesis. While highly flexible, these models are prone to hallucinations, where they generate syntactically correct but semantically invalid identifiers or operations. To mitigate this, constrained decoding techniques like PICARD~\cite{scholak2021picard} and various grammar-guided generation frameworks have been proposed to ensure structural adherence. Additionally, Retrieval-Augmented Generation (RAG) is often used to ground outputs in actual database schemas~\cite{rag2024hallucination}. Despite these advances, production-grade IoT systems require deterministic guarantees. Text2Query combines the reasoning flexibility of LLMs with a deterministic regex fallback and a validation-repair loop, ensuring a 100\% pipeline success rate even when the LLM is unavailable or produces malformed output.
+
+\subsection{IoT Data Platforms and Sensor Interfaces}
+IoT data management typically relies on time-series databases such as InfluxDB~\cite{influxdb} and MongoDB~\cite{mongodb}, with visualization handled by tools like Grafana~\cite{grafana}. Recent efforts to introduce natural language access, such as the InfluxDB 3 MCP server~\cite{influx2025mcp}, allow for conversational querying through AI agents. However, these interfaces often act as wrappers around the database's native query language, still requiring the underlying model to correctly synthesize a complex query in a single pass. Furthermore, they typically decouple data retrieval from final answer synthesis and visualization. Text2Query provides a fully integrated four-stage pipeline that not only retrieves data but also generates a grounded natural language answer and an auto-generated Plotly visualization, removing the need for users to manually construct dashboards or interpret raw JSON results.
+
+%% ============================================================
+%% 3. Software description
 %% ============================================================
 \section{Software description}
 
