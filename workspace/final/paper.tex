@@ -104,47 +104,83 @@ Fig.~\ref{fig:architecture} shows the four-stage pipeline architecture. A natura
 \centering
 \resizebox{\textwidth}{!}{
 \begin{tikzpicture}[
-    node distance=1.2cm,
-    block/.style={rectangle, draw, fill=blue!10, text width=2.5cm, text centered, minimum height=1.2cm, rounded corners},
-    ir/.style={rectangle, draw, fill=orange!20, text width=2.2cm, text centered, minimum height=1.2cm, ultra thick},
-    db/.style={cylinder, draw, shape border rotate=90, fill=yellow!20, text width=1.5cm, text centered, minimum height=1.2cm},
-    startstop/.style={rectangle, draw, fill=red!10, text width=2cm, text centered, minimum height=1cm, rounded corners},
+    node distance=0.8cm and 1cm,
+    stage/.style={rectangle, draw, fill=gray!5, text width=3.8cm, minimum height=4.5cm, rounded corners, thick},
+    process/.style={rectangle, draw, fill=white, text width=3.2cm, text centered, minimum height=0.7cm, font=\scriptsize, rounded corners=2pt},
+    ir/.style={rectangle, draw, fill=orange!20, text width=2cm, text centered, minimum height=0.8cm, ultra thick, font=\small\bfseries},
+    db/.style={cylinder, draw, shape border rotate=90, fill=yellow!20, text width=1.5cm, text centered, minimum height=1.2cm, font=\small},
+    startstop/.style={rectangle, draw, fill=red!10, text width=2cm, text centered, minimum height=0.8cm, rounded corners, font=\small},
     arrow/.style={-Stealth, thick}
 ]
-    % Nodes
-    \node (start) [startstop] {User Question};
+    % --- S1: Decomposer ---
+    \node (s1box) [stage] {};
+    \node [above=0.1cm of s1box] {\textbf{S1: Decomposer}};
 
-    \node (s1) [block, right=of start] {\textbf{S1: Decomposer}\\ \scriptsize LLM $\to$ Repair $\to$ Regex};
+    \node (s1_llm) [process, at={(s1box.center)}] {LLM Inference (Qwen3.5)};
+    \node (s1_val) [process, below=of s1_llm] {Validation \& Self-Repair};
+    \node (s1_reg) [process, below=of s1_val] {Regex Fallback (Alias Tables)};
 
-    \node (qp) [ir, right=of s1] {\textbf{QueryPlan}\\ \scriptsize (IR)};
+    \draw [arrow] (s1_llm) -- (s1_val);
+    \draw [arrow] (s1_val.east) -- ++(0.2,0) |- (s1_reg.east);
 
-    \node (s2) [block, right=of qp] {\textbf{S2: Query Executor}};
-    \node (db) [db, below=of s2] {MongoDB};
+    % --- QueryPlan IR ---
+    \node (qp) [ir, right=of s1box] {QueryPlan (IR)};
 
-    \node (s3) [block, right=of s2, yshift=1.2cm] {\textbf{S3: Answer Generator}};
-    \node (s4) [block, right=of s2, yshift=-1.2cm] {\textbf{S4: Visualization}};
+    % --- S2: Query Executor ---
+    \node (s2box) [stage, right=of qp] {};
+    \node [above=0.1cm of s2box] {\textbf{S2: Query Executor}};
 
-    \node (end) [startstop, right=of s3, xshift=2cm, yshift=-1.2cm] {Final Response\\ \scriptsize (NL Answer + Chart)};
+    \node (s2_time) [process, at={(s2box.center), yshift=1cm}] {Time Scope Resolution};
+    \node (s2_trans) [process, below=of s2_time] {Aggregation Translation};
+    \node (s2_safe) [process, below=of s2_trans] {Execution Safety Net};
 
-    % Arrows
-    \draw [arrow] (start) -- (s1);
-    \draw [arrow] (s1) -- (qp);
-    \draw [arrow] (qp) -- (s2);
-    \draw [arrow] (s2) -- (db);
-    \draw [arrow] (db) -- (s2);
+    \draw [arrow] (s2_time) -- (s2_trans);
+    \draw [arrow] (s2_trans) -- (s2_safe);
 
-    % S2 to S3 and S4
-    \coordinate (branch) at ($(s2.east) + (0.4,0)$);
-    \draw [arrow] (s2.east) -- (branch);
-    \draw [arrow] (branch) |- (s3.west);
-    \draw [arrow] (branch) |- (s4.west);
+    % --- MongoDB ---
+    \node (db) [db, below=of s2box, yshift=-0.5cm] {MongoDB};
+    \draw [arrow] (s2_safe) -- (db);
+    \draw [arrow] (db) -- ++(0,0.5) |- (s2_time.west);
 
-    % S3 and S4 to End
-    \draw [arrow] (s3.east) -- ++(0.5,0) |- (end.west);
-    \draw [arrow] (s4.east) -- ++(0.5,0) |- (end.west);
+    % --- S3: Answer Generator ---
+    \node (s3box) [stage, right=of s2box, yshift=2.2cm] {};
+    \node [above=0.1cm of s3box] {\textbf{S3: Answer Generator}};
+
+    \node (s3_ground) [process, at={(s3box.center), yshift=0.8cm}] {Grounding Prompting};
+    \node (s3_annot) [process, below=of s3_ground] {Unit \& Source Annotation};
+
+    \draw [arrow] (s3_ground) -- (s3_annot);
+
+    % --- S4: Visualization ---
+    \node (s4box) [stage, right=of s2box, yshift=-2.2cm] {};
+    \node [above=0.1cm of s4box] {\textbf{S4: Visualization}};
+
+    \node (s4_detect) [process, at={(s4box.center), yshift=0.8cm}] {Chart Type Detection};
+    \node (s4_grid) [process, below=of s4_detect] {Universal Grid Builder};
+    \node (s4_render) [process, below=of s4_grid] {Plotly Rendering \& Export};
+
+    \draw [arrow] (s4_detect) -- (s4_grid);
+    \draw [arrow] (s4_grid) -- (s4_render);
+
+    % --- Global Flow ---
+    \node (start) [startstop, left=of s1box] {User Question};
+    \node (end) [startstop, right=of s3box, xshift=2cm, yshift=-2.2cm] {Final Response\\ \scriptsize (Answer + Chart)};
+
+    \draw [arrow] (start) -- (s1box);
+    \draw [arrow] (s1box) -- (qp);
+    \draw [arrow] (qp) -- (s2box);
+
+    \coordinate (branch) at ($(s2box.east) + (0.5,0)$);
+    \draw [arrow] (s2box.east) -- (branch);
+    \draw [arrow] (branch) |- (s3box.west);
+    \draw [arrow] (branch) |- (s4box.west);
+
+    \draw [arrow] (s3box.east) -- ++(0.5,0) |- (end.west);
+    \draw [arrow] (s4box.east) -- ++(0.5,0) |- (end.west);
+
 \end{tikzpicture}
 }
-\caption{Architecture of the Text2Query four-stage pipeline. Natural language questions are processed by S1 (Decomposer) into a structured QueryPlan, which drives S2 (Query Executor) to retrieve data from MongoDB, S3 (Answer Generator) to produce a natural language response, and optionally S4 (Visualization) to generate context-appropriate charts. The self-repair loop in S1 corrects malformed QueryPlans before execution.}
+\caption{Detailed architecture of the Text2Query pipeline. Each stage is decomposed into its core processing steps: S1 (Decomposer) manages the hybrid LLM-to-Regex flow; S2 (Query Executor) handles time-resolution and MongoDB aggregation; S3 (Answer Generator) focuses on grounding and annotation; and S4 (Visualization) implements a universal grid builder for Plotly charts. The QueryPlan IR serves as the modular abstraction layer between semantic parsing and data retrieval.}
 \label{fig:architecture}
 \end{figure}
 
